@@ -37,3 +37,4 @@ ENV/
 data.json
 GEMINI.md
 prompt.md
+data/

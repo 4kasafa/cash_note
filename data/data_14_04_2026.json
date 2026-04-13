@@ -1,0 +1,27 @@
+[
+    {
+        "amount": 20000,
+        "category": "Cash",
+        "timestamp": "2026-04-14 00:58:03"
+    },
+    {
+        "amount": 20000,
+        "category": "Cash",
+        "timestamp": "2026-04-14 00:58:33"
+    },
+    {
+        "amount": 40000,
+        "category": "Non Cash",
+        "timestamp": "2026-04-14 00:58:43"
+    },
+    {
+        "amount": 90000,
+        "category": "Cash",
+        "timestamp": "2026-04-14 01:02:00"
+    },
+    {
+        "amount": 90000,
+        "category": "Cash",
+        "timestamp": "2026-04-14 01:02:08"
+    }
+]
