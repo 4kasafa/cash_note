@@ -9,21 +9,29 @@ import threading
 import time
 import glob
 
-# Elite Hacker Configuration
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("green")
+# Style Configuration
+ctk.set_appearance_mode("light")
+ctk.set_default_color_theme("blue")
 
-# Colors (Military/Blacksite Terminal Palette)
-BG_COLOR = "#050505"
-SIDEBAR_COLOR = "#080808"
-CONSOLE_COLOR = "#020202"
-TEXT_COLOR = "#00ff00"
-ACCENT_COLOR = "#004400"
-CASH_COLOR = "#00ff00"
-NON_CASH_COLOR = "#ffff00"
-UNINPUT_COLOR = "#ff0000"
-BORDER_COLOR = "#003300"
+# Colors (Modern Payment UI Palette)
+BG_COLOR = "#f0f0f0"
+SIDEBAR_COLOR = "#ffffff"
+CONSOLE_COLOR = "#ffffff"
+TEXT_COLOR = "#333333"
+ACCENT_COLOR = "#0078d7"
+BORDER_COLOR = "#cccccc"
+
+# Status Colors from Image
+STATUS_TOTAL_BG = "#ffff00" # Yellow
+STATUS_PAID_BG = "#90ee90"  # Light Green
+STATUS_CHANGE_BG = "#ffa500" # Orange
 DATA_DIR = "data"
+
+# Font Configuration
+MAIN_FONT = ("Segoe UI", 12)
+HEADER_FONT = ("Segoe UI", 18, "bold")
+DISPLAY_FONT = ("Segoe UI", 32, "bold")
+SMALL_FONT = ("Segoe UI", 10)
 
 # Windows API Constants
 SW_RESTORE = 9
@@ -35,11 +43,11 @@ WM_HOTKEY = 0x0312
 
 user32 = ctypes.windll.user32
 
-class CashCounterApp(ctk.CTk):
+class CashNoteApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("BLACKSITE_TERMINAL_v2.5")
+        self.title("Cash Note")
         self.geometry("550x850")
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)
@@ -62,11 +70,6 @@ class CashCounterApp(ctk.CTk):
         self.create_tabs()
         self.show_tab("SYS")
 
-        # System Initialization
-        self.log_to_console("BOOT_SEQUENCE: OK")
-        self.log_to_console(f"VAULT_DIR: {DATA_DIR} [DETECTED]")
-        self.log_to_console("SYSTEM_READY: WAITING_FOR_OPERATOR")
-
         # Windows API
         self.after(500, self.init_windows_api)
         self.start_hotkey_listener()
@@ -84,25 +87,17 @@ class CashCounterApp(ctk.CTk):
         self.sidebar = ctk.CTkFrame(self, width=60, fg_color=SIDEBAR_COLOR, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
         self.sidebar.pack(side="left", fill="y")
         
-        self.btn_sys = self.create_nav_btn("SYS", "[S]", "Alt+1")
-        self.btn_vlt = self.create_nav_btn("VLT", "[V]", "Alt+2")
-        self.btn_act = self.create_nav_btn("ACT", "[A]", "Alt+3")
+        self.btn_sys = self.create_nav_btn("SYS", "S")
+        self.btn_vlt = self.create_nav_btn("VLT", "V")
+        self.btn_act = self.create_nav_btn("ACT", "A")
+        self.btn_act.pack_forget() # Hidden initially
         
         # Main Work Area
         self.main_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.main_container.pack(side="top", fill="both", expand=True)
-        
-        # Bottom Console
-        self.console_frame = ctk.CTkFrame(self, height=120, fg_color=CONSOLE_COLOR, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
-        self.console_frame.pack(side="bottom", fill="x")
-        self.console_frame.pack_propagate(False)
-        
-        self.console_out = ctk.CTkTextbox(self.console_frame, font=("Consolas", 10), fg_color="transparent", text_color=TEXT_COLOR, activate_scrollbars=True, corner_radius=0)
-        self.console_out.pack(fill="both", expand=True, padx=5, pady=5)
-        self.console_out.configure(state="disabled")
 
-    def create_nav_btn(self, tab_id, text, shortcut):
-        btn = ctk.CTkButton(self.sidebar, text=text, width=50, height=50, corner_radius=0, font=("Consolas", 14, "bold"), fg_color="transparent", border_width=0, hover_color=ACCENT_COLOR, command=lambda: self.show_tab(tab_id))
+    def create_nav_btn(self, tab_id, text):
+        btn = ctk.CTkButton(self.sidebar, text=text, width=50, height=50, corner_radius=0, font=("Segoe UI", 14, "bold"), fg_color="transparent", border_width=0, text_color=ACCENT_COLOR, hover_color="#e5e5e5", command=lambda: self.show_tab(tab_id))
         btn.pack(pady=5)
         return btn
 
@@ -112,10 +107,14 @@ class CashCounterApp(ctk.CTk):
         self.tabs["ACT"] = SessionTab(self.main_container, self)
 
     def show_tab(self, tab_id):
+        if tab_id == "ACT" and not self.current_file:
+            messagebox.showwarning("Access Denied", "Please start a new session or open an existing one first.")
+            return
+
         # Refresh visuals
-        self.btn_sys.configure(fg_color=ACCENT_COLOR if tab_id == "SYS" else "transparent")
-        self.btn_vlt.configure(fg_color=ACCENT_COLOR if tab_id == "VLT" else "transparent")
-        self.btn_act.configure(fg_color=ACCENT_COLOR if tab_id == "ACT" else "transparent")
+        self.btn_sys.configure(fg_color=ACCENT_COLOR if tab_id == "SYS" else "transparent", text_color="white" if tab_id == "SYS" else ACCENT_COLOR)
+        self.btn_vlt.configure(fg_color=ACCENT_COLOR if tab_id == "VLT" else "transparent", text_color="white" if tab_id == "VLT" else ACCENT_COLOR)
+        self.btn_act.configure(fg_color=ACCENT_COLOR if tab_id == "ACT" else "transparent", text_color="white" if tab_id == "ACT" else ACCENT_COLOR)
         
         # Hide current
         for tab in self.tabs.values():
@@ -124,31 +123,22 @@ class CashCounterApp(ctk.CTk):
         # Show new
         self.tabs[tab_id].pack(fill="both", expand=True)
         self.active_tab = tab_id
-        self.log_to_console(f"ACCESSING_SECTOR: {tab_id}")
         
         if tab_id == "VLT":
             self.tabs["VLT"].refresh_vault_list()
         elif tab_id == "ACT":
-            if not self.current_file:
-                self.log_to_console("> WARNING: NO_ACTIVE_SESSION_FOUND")
-                # Optional: force redirect or keep blank
-            else:
-                self.tabs["ACT"].on_activate()
+            self.tabs["ACT"].on_activate()
 
     def log_to_console(self, msg):
-        timestamp = datetime.now().strftime("[%H:%M:%S]")
-        self.console_out.configure(state="normal")
-        self.console_out.insert("end", f"{timestamp} {msg}\n")
-        self.console_out.see("end")
-        self.console_out.configure(state="disabled")
+        pass
 
     # Windows API Logic
     def init_windows_api(self):
         self.my_hwnd = user32.GetForegroundWindow()
         buf = ctypes.create_unicode_buffer(100)
         user32.GetWindowTextW(self.my_hwnd, buf, 100)
-        if "BLACKSITE" not in buf.value:
-            self.my_hwnd = user32.FindWindowW(None, "BLACKSITE_TERMINAL_v2.5")
+        if "Cash Note" not in buf.value:
+            self.my_hwnd = user32.FindWindowW(None, "Cash Note")
 
     def start_hotkey_listener(self):
         def listen():
@@ -186,49 +176,50 @@ class SystemTab(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent", corner_radius=0)
         self.controller = controller
         
-        # ASCII Art
-        self.ascii_label = ctk.CTkLabel(self, text="""
-██████╗ ██╗      █████╗  ██████╗██╗  ██╗███████╗██╗████████╗███████╗
-██╔══██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██╔════╝██║╚══██╔══╝██╔════╝
-██████╔╝██║     ███████║██║     █████╔╝ ███████╗██║   ██║   █████╗  
-██╔══██╗██║     ██╔══██║██║     ██╔═██╗ ╚════██║██║   ██║   ██╔══╝  
-██████╔╝███████╗██║  ██║╚██████╗██║  ██╗███████║██║   ██║   ███████╗
-╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝   ╚═╝   ╚══════╝
-        """, font=("Consolas", 6), text_color=TEXT_COLOR)
-        self.ascii_label.pack(pady=(40, 20))
-
-        self.title_label = ctk.CTkLabel(self, text="> [OPERATOR_MAIN_MENU]", font=("Consolas", 20, "bold"), text_color=TEXT_COLOR)
-        self.title_label.pack(pady=10)
+        ctk.CTkLabel(self, text="Cash Note", font=("Segoe UI", 24, "bold"), text_color=ACCENT_COLOR).pack(pady=(60, 10))
+        ctk.CTkLabel(self, text="Professional Transaction Management", font=SMALL_FONT, text_color="grey").pack(pady=(0, 30))
 
         # Stats Section
-        self.stats_frame = ctk.CTkFrame(self, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+        self.stats_frame = ctk.CTkFrame(self, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         self.stats_frame.pack(fill="x", padx=50, pady=20)
         
-        self.add_stat("SECTOR_HEALTH", "STABLE")
-        self.add_stat("ENCRYPTION", "AES-256")
-        self.add_stat("STORAGE_LINK", "ACTIVE")
-        self.add_stat("TERMINAL_Uptime", f"{datetime.now().strftime('%d-%m-%Y %H:%M')}")
+        self.add_stat("System Health", "Operational")
+        self.add_stat("Encryption", "Active (AES-256)")
+        self.add_stat("Cloud Sync", "Connected")
+        self.add_stat("Last Login", f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
         # Action Prompt
-        self.btn_new = ctk.CTkButton(self, text="[ INITIALIZE_NEW_SESSION ]", font=("Consolas", 16, "bold"), height=60, fg_color=ACCENT_COLOR, border_width=1, border_color=TEXT_COLOR, corner_radius=0, command=self.init_session)
-        self.btn_new.pack(fill="x", padx=50, pady=10)
+        self.btn_new = ctk.CTkButton(self, text="Start New Session", font=HEADER_FONT, height=60, fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, command=self.init_session)
+        self.btn_new.pack(fill="x", padx=50, pady=20)
         
-        ctk.CTkLabel(self, text="> PRESS [SPACE] TO INITIALIZE", font=("Consolas", 10), text_color="#006600").pack()
+        ctk.CTkLabel(self, text="Press [Space] to initialize", font=SMALL_FONT, text_color="grey").pack()
 
     def add_stat(self, key, val):
         f = ctk.CTkFrame(self.stats_frame, fg_color="transparent")
-        f.pack(fill="x", padx=10, pady=2)
-        ctk.CTkLabel(f, text=f"{key}:", font=("Consolas", 10, "bold"), text_color=TEXT_COLOR).pack(side="left")
-        ctk.CTkLabel(f, text=val, font=("Consolas", 10), text_color=TEXT_COLOR).pack(side="right")
+        f.pack(fill="x", padx=15, pady=5)
+        ctk.CTkLabel(f, text=f"{key}:", font=("Segoe UI", 11, "bold"), text_color=TEXT_COLOR).pack(side="left")
+        ctk.CTkLabel(f, text=val, font=("Segoe UI", 11), text_color=TEXT_COLOR).pack(side="right")
 
     def init_session(self):
         today = datetime.now().strftime("%d_%m_%Y")
-        file_path = os.path.join(DATA_DIR, f"data_{today}.json")
+        base_name = f"data_{today}"
+        file_path = os.path.join(DATA_DIR, f"{base_name}.json")
+        
+        # Multi-session logic
+        if os.path.exists(file_path):
+            counter = 1
+            while True:
+                suffix = f"_{counter:03d}"
+                file_path = os.path.join(DATA_DIR, f"{base_name}{suffix}.json")
+                if not os.path.exists(file_path):
+                    break
+                counter += 1
+                
         self.controller.current_file = file_path
         self.controller.tabs["ACT"].file_path = file_path
         self.controller.tabs["ACT"].load_session()
+        self.controller.btn_act.pack(pady=5)
         self.controller.show_tab("ACT")
-        self.controller.log_to_console(f"NEW_SESSION_STARTED: {os.path.basename(file_path)}")
 
 class VaultTab(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -238,22 +229,22 @@ class VaultTab(ctk.CTkFrame):
         self.setup_ui()
 
     def setup_ui(self):
-        ctk.CTkLabel(self, text="> [STORAGE_VAULT_EXPLORER]", font=("Consolas", 18, "bold"), text_color=TEXT_COLOR).pack(pady=10)
+        ctk.CTkLabel(self, text="Vault Explorer", font=HEADER_FONT, text_color=TEXT_COLOR).pack(pady=10)
         
-        self.search_entry = ctk.CTkEntry(self, placeholder_text="FILTER_BY_ID (DD_MM_YYYY)...", font=("Consolas", 12), fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=0)
+        self.search_entry = ctk.CTkEntry(self, placeholder_text="Search by date (DD_MM_YYYY)...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=4)
         self.search_entry.pack(fill="x", padx=20, pady=5)
         self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_vault_list())
 
-        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, label_text="ARCHIVED_DATA_LOGS", label_font=("Consolas", 12), label_text_color=TEXT_COLOR)
+        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         self.scroll_vault.pack(fill="both", expand=True, padx=20, pady=5)
 
         self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.btn_frame.pack(fill="x", padx=20, pady=10)
         
-        self.btn_delete = ctk.CTkButton(self.btn_frame, text="TERMINATE_RECORDS", fg_color="#330000", text_color=UNINPUT_COLOR, border_width=1, border_color=UNINPUT_COLOR, corner_radius=0, font=("Consolas", 12), command=self.delete_selected)
+        self.btn_delete = ctk.CTkButton(self.btn_frame, text="Delete Selected", fg_color="#ff4444", text_color="white", corner_radius=8, font=MAIN_FONT, command=self.delete_selected)
         self.btn_delete.pack(side="left", expand=True, padx=5)
         
-        self.btn_open = ctk.CTkButton(self.btn_frame, text="DECRYPT_&_MOUNT", fg_color=ACCENT_COLOR, text_color=TEXT_COLOR, border_width=1, border_color=TEXT_COLOR, corner_radius=0, font=("Consolas", 12), command=self.open_selected)
+        self.btn_open = ctk.CTkButton(self.btn_frame, text="Open Session", fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, font=MAIN_FONT, command=self.open_selected)
         self.btn_open.pack(side="right", expand=True, padx=5)
 
     def refresh_vault_list(self):
@@ -277,13 +268,13 @@ class VaultTab(ctk.CTkFrame):
                     count = len(data)
             except: total, count = 0, 0
 
-            item = ctk.CTkFrame(self.scroll_vault, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+            item = ctk.CTkFrame(self.scroll_vault, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=8)
             item.pack(fill="x", pady=2, padx=2)
             
-            cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=0, command=lambda p=f: self.toggle_selection(p))
+            cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=4, command=lambda p=f: self.toggle_selection(p))
             cb.pack(side="left", padx=10)
             
-            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | [ENTRIES: {count}]".replace(",", "."), font=("Consolas", 11), fg_color="transparent", text_color="#aaaaaa", hover_color=ACCENT_COLOR, anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
+            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Entries: {count}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
             info.pack(side="left", fill="both", expand=True)
 
     def toggle_selection(self, path):
@@ -292,11 +283,10 @@ class VaultTab(ctk.CTkFrame):
 
     def delete_selected(self):
         if not self.selected_files: return
-        if messagebox.askyesno("TERMINAL_AUTH", f"PURGE {len(self.selected_files)} DATA_RECORDS?"):
+        if messagebox.askyesno("Confirmation", f"Permanently delete {len(self.selected_files)} session records?"):
             for f in self.selected_files:
                 try: os.remove(f)
                 except: pass
-            self.controller.log_to_console(f"VAULT_CLEANUP: {len(self.selected_files)} RECORDS_PURGED")
             self.refresh_vault_list()
 
     def open_selected(self):
@@ -307,8 +297,8 @@ class VaultTab(ctk.CTkFrame):
         self.controller.current_file = path
         self.controller.tabs["ACT"].file_path = path
         self.controller.tabs["ACT"].load_session()
+        self.controller.btn_act.pack(pady=5)
         self.controller.show_tab("ACT")
-        self.controller.log_to_console(f"MOUNTED_VAULT: {os.path.basename(path)}")
 
 class SessionTab(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -318,6 +308,8 @@ class SessionTab(ctk.CTkFrame):
         self.transactions = []
         self.current_filter = "All"
         self.editing_index = None
+        self.current_page = 0
+        self.page_size = 7
         self.setup_ui()
 
     def setup_ui(self):
@@ -326,75 +318,112 @@ class SessionTab(ctk.CTkFrame):
         self.header_frame.pack(fill="x", padx=10, pady=(10, 0))
         self.header_frame.pack_propagate(False)
         
-        self.lbl_session = ctk.CTkLabel(self.header_frame, text="> ACTIVE_SESSION: NONE", font=("Consolas", 10, "bold"), text_color=TEXT_COLOR)
+        self.lbl_session = ctk.CTkLabel(self.header_frame, text="Session: None", font=("Segoe UI", 10, "bold"), text_color=TEXT_COLOR)
         self.lbl_session.pack(side="left", padx=10)
         
-        self.lbl_count = ctk.CTkLabel(self.header_frame, text="RECORDS: 0", font=("Consolas", 10), text_color="#006600")
+        self.lbl_count = ctk.CTkLabel(self.header_frame, text="Entries: 0", font=("Segoe UI", 10), text_color="grey")
         self.lbl_count.pack(side="right", padx=10)
 
         # Main Input
         self.input_area = ctk.CTkFrame(self, fg_color="transparent")
         self.input_area.pack(fill="x", padx=20, pady=10)
         
-        self.entry_amount = ctk.CTkEntry(self.input_area, placeholder_text="AWAITING_INPUT...", height=60, font=("Consolas", 32), justify="center", fg_color=CONSOLE_COLOR, border_color=TEXT_COLOR, text_color=TEXT_COLOR, corner_radius=0)
-        self.entry_amount.pack(fill="x", pady=(0, 10))
+        self.entry_frame = ctk.CTkFrame(self.input_area, fg_color=STATUS_TOTAL_BG, border_width=2, border_color=BORDER_COLOR, corner_radius=8)
+        self.entry_frame.pack(fill="x", pady=(0, 10))
+        
+        self.entry_amount = ctk.CTkEntry(self.entry_frame, placeholder_text="0.00", height=80, font=DISPLAY_FONT, justify="right", fg_color="transparent", border_width=0, text_color="black", corner_radius=0)
+        self.entry_amount.pack(fill="x", padx=10)
         self.entry_amount.bind("<KeyRelease>", self.format_currency)
         self.entry_amount.bind("<Return>", lambda e: self.btn_cash.focus())
         
         self.btn_grid = ctk.CTkFrame(self.input_area, fg_color="transparent")
         self.btn_grid.pack(fill="x")
         
-        self.btn_cash = self.create_input_btn(self.btn_grid, "CASH", CASH_COLOR, "#003300", "Cash")
-        self.btn_non = self.create_input_btn(self.btn_grid, "NON_CASH", NON_CASH_COLOR, "#333300", "Non Cash")
-        self.btn_unin = self.create_input_btn(self.btn_grid, "UNINPUT", UNINPUT_COLOR, "#330000", "Uninput")
+        self.btn_cash = self.create_input_btn(self.btn_grid, "Cash", "#2e7d32", "#e8f5e9", "Cash")
+        self.btn_non = self.create_input_btn(self.btn_grid, "Non Cash", "#fbc02d", "#fffde7", "Non Cash")
+        self.btn_unin = self.create_input_btn(self.btn_grid, "Uninput", "#d32f2f", "#ffebee", "Uninput")
 
         # Edit Controls
         self.edit_frame = ctk.CTkFrame(self.input_area, fg_color="transparent")
-        self.btn_commit = ctk.CTkButton(self.edit_frame, text="[ COMMIT_CHANGES ]", fg_color="#000033", text_color="#3399ff", border_width=1, border_color="#3399ff", corner_radius=0, font=("Consolas", 12, "bold"), command=self.save_edit)
+        self.btn_commit = ctk.CTkButton(self.edit_frame, text="Save Changes", fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, font=MAIN_FONT, command=self.save_edit)
         self.btn_commit.pack(side="left", expand=True, padx=2, fill="x")
-        ctk.CTkButton(self.edit_frame, text="[ ABORT ]", fg_color="#1a1a1a", text_color="gray", corner_radius=0, font=("Consolas", 12), command=self.cancel_edit, width=80).pack(side="left", padx=2)
+        ctk.CTkButton(self.edit_frame, text="Cancel", fg_color="#666666", text_color="white", corner_radius=8, font=MAIN_FONT, command=self.cancel_edit, width=80).pack(side="left", padx=2)
 
         # Filter Section
         self.filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.filter_frame.pack(fill="x", padx=20, pady=(5, 0))
         
-        self.btn_filter_all = self.create_filter_btn("ALL", "All")
-        self.btn_filter_cash = self.create_filter_btn("CASH", "Cash")
-        self.btn_filter_non = self.create_filter_btn("NON_C", "Non Cash")
-        self.btn_filter_unin = self.create_filter_btn("UNIN", "Uninput")
+        self.btn_filter_all = self.create_filter_btn("All", "All")
+        self.btn_filter_cash = self.create_filter_btn("Cash", "Cash")
+        self.btn_filter_non = self.create_filter_btn("Non Cash", "Non Cash")
+        self.btn_filter_unin = self.create_filter_btn("Uninput", "Uninput")
 
-        # Log & Total
-        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, label_text="TRANSACTION_BUFFER", label_font=("Consolas", 12), label_text_color=TEXT_COLOR)
+        # List Area
+        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
 
-        self.footer = ctk.CTkFrame(self, height=70, fg_color=SIDEBAR_COLOR, border_width=1, border_color=TEXT_COLOR, corner_radius=0)
-        self.footer.pack(fill="x", side="bottom")
-        self.lbl_total = ctk.CTkLabel(self.footer, text="BUFFER_TOTAL: Rp 0", font=("Consolas", 20, "bold"), text_color=TEXT_COLOR)
-        self.lbl_total.pack(pady=15)
+        # Pagination
+        self.pagination_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.pagination_frame.pack(fill="x", padx=20, pady=5)
+        
+        self.btn_prev = ctk.CTkButton(self.pagination_frame, text="<", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=4, command=self.prev_page)
+        self.btn_prev.pack(side="left")
+        
+        self.lbl_page = ctk.CTkLabel(self.pagination_frame, text="Page 1 of 1", font=SMALL_FONT, text_color=TEXT_COLOR)
+        self.lbl_page.pack(side="left", expand=True)
+        
+        self.btn_next = ctk.CTkButton(self.pagination_frame, text=">", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=4, command=self.next_page)
+        self.btn_next.pack(side="right")
+
+        # Footer
+        self.footer = ctk.CTkFrame(self, fg_color="transparent")
+        self.footer.pack(fill="x", side="bottom", padx=20, pady=10)
+        
+        self.total_display_frame = ctk.CTkFrame(self.footer, fg_color=STATUS_PAID_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+        self.total_display_frame.pack(fill="x", pady=5)
+        
+        self.lbl_total_label = ctk.CTkLabel(self.total_display_frame, text="Total Amount :", font=("Segoe UI", 16), text_color="black")
+        self.lbl_total_label.pack(side="left", padx=15, pady=15)
+        
+        self.lbl_total = ctk.CTkLabel(self.total_display_frame, text="0.00", font=HEADER_FONT, text_color="black")
+        self.lbl_total.pack(side="right", padx=15, pady=15)
+
+    def prev_page(self):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.refresh_list()
+
+    def next_page(self):
+        indexed_data = list(enumerate(self.transactions))
+        filtered_data = [t for i, t in indexed_data if self.current_filter == "All" or t["category"] == self.current_filter]
+        max_pages = (len(filtered_data) - 1) // self.page_size
+        if self.current_page < max_pages:
+            self.current_page += 1
+            self.refresh_list()
 
     def create_filter_btn(self, text, cat):
-        btn = ctk.CTkButton(self.filter_frame, text=text, width=60, height=25, font=("Consolas", 10), corner_radius=0, command=lambda: self.set_filter(cat))
+        btn = ctk.CTkButton(self.filter_frame, text=text, width=80, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=4, command=lambda: self.set_filter(cat))
         btn.pack(side="left", padx=2)
         return btn
 
     def create_input_btn(self, parent, text, color, bg, cat):
-        btn = ctk.CTkButton(parent, text=text, fg_color=bg, hover_color=color, font=("Consolas", 12, "bold"), text_color=color, border_width=1, border_color=color, corner_radius=0, command=lambda: self.add_transaction(cat))
+        btn = ctk.CTkButton(parent, text=text, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 12, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=8, command=lambda: self.add_transaction(cat))
         btn.pack(side="left", expand=True, padx=2)
         
-        # Enhanced Focus Visuals
         def on_focus(e):
-            btn.configure(border_width=3, border_color=TEXT_COLOR)
+            btn.configure(border_width=2, border_color=ACCENT_COLOR)
         def on_unfocus(e):
-            btn.configure(border_width=1, border_color=color)
+            btn.configure(border_width=1, border_color=BORDER_COLOR)
             
         btn.bind("<FocusIn>", on_focus)
         btn.bind("<FocusOut>", on_unfocus)
         btn.bind("<Return>", lambda e: self.add_transaction(cat))
-        btn.bind("<KP_Enter>", lambda e: self.add_transaction(cat)) # Numpad Enter support
+        btn.bind("<KP_Enter>", lambda e: self.add_transaction(cat))
         return btn
 
     def set_filter(self, cat):
         self.current_filter = cat
+        self.current_page = 0
         self.refresh_list()
         self.update_filter_visuals()
 
@@ -402,29 +431,28 @@ class SessionTab(ctk.CTkFrame):
         btns = {"All": self.btn_filter_all, "Cash": self.btn_filter_cash, "Non Cash": self.btn_filter_non, "Uninput": self.btn_filter_unin}
         for cat, btn in btns.items():
             is_active = cat == self.current_filter
-            btn.configure(fg_color=ACCENT_COLOR if is_active else "transparent", border_width=1 if is_active else 0, border_color=TEXT_COLOR)
+            btn.configure(fg_color=ACCENT_COLOR if is_active else "#e5e5e5", text_color="white" if is_active else "black")
 
     def on_activate(self):
         self.entry_amount.focus_set()
         if self.file_path:
-            self.lbl_session.configure(text=f"> ACTIVE_SESSION: {os.path.basename(self.file_path)}")
+            self.lbl_session.configure(text=f"Session: {os.path.basename(self.file_path)}")
         self.update_filter_visuals()
             
     def load_session(self):
         if os.path.exists(self.file_path):
             with open(self.file_path, "r") as f: self.transactions = json.load(f)
         else: self.transactions = []
+        self.current_page = 0
         self.refresh_list()
         self.update_filter_visuals()
 
     def save_session(self):
+        if not self.file_path: return
         with open(self.file_path, "w") as f: json.dump(self.transactions, f, indent=4)
             
     def format_currency(self, event=None):
-        # Allow Tab to pass through without re-formatting
-        if event and event.keysym == "Tab":
-            return
-            
+        if event and event.keysym == "Tab": return
         val = self.entry_amount.get().replace(".", "")
         if not val.isdigit() and val != "": val = "".join(filter(str.isdigit, val))
         if val == "": self.entry_amount.delete(0, "end"); return
@@ -440,18 +468,17 @@ class SessionTab(ctk.CTkFrame):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
         self.save_session()
-        self.controller.log_to_console(f"RECORD_ADDED: Rp {int(val_str):,} -> [{cat}]".replace(",", "."))
         self.entry_amount.delete(0, "end")
+        self.current_page = 0
         self.refresh_list()
         self.controller.return_focus()
         self.entry_amount.focus()
 
     def delete_transaction(self, idx):
-        if messagebox.askyesno("TERMINAL_AUTH", "PURGE_ENTRY?"):
+        if messagebox.askyesno("Confirmation", "Delete this entry?"):
             self.transactions.pop(idx)
             self.save_session()
             self.refresh_list()
-            self.controller.log_to_console("RECORD_PURGED")
 
     def edit_transaction(self, idx):
         self.editing_index = idx
@@ -467,7 +494,6 @@ class SessionTab(ctk.CTkFrame):
         if val:
             self.transactions[self.editing_index]["amount"] = int(val)
             self.save_session()
-            self.controller.log_to_console(f"RECORD_MODIFIED: IDX_{self.editing_index}")
             self.cancel_edit()
             self.refresh_list()
 
@@ -479,38 +505,47 @@ class SessionTab(ctk.CTkFrame):
 
     def refresh_list(self):
         for w in self.scroll_log.winfo_children(): w.destroy()
-        total = 0
         
-        # Filtering logic
         indexed_data = list(enumerate(self.transactions))
         filtered_data = [(i, t) for i, t in indexed_data if self.current_filter == "All" or t["category"] == self.current_filter]
         
-        for idx, item in reversed(filtered_data):
-            color = {"Cash": CASH_COLOR, "Non Cash": NON_CASH_COLOR, "Uninput": UNINPUT_COLOR}.get(item["category"], TEXT_COLOR)
-            
-            row = ctk.CTkFrame(self.scroll_log, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+        total_items = len(filtered_data)
+        total_pages = max(1, (total_items + self.page_size - 1) // self.page_size)
+        
+        if self.current_page >= total_pages: self.current_page = total_pages - 1
+        
+        start_idx = self.current_page * self.page_size
+        end_idx = start_idx + self.page_size
+        
+        reversed_data = list(reversed(filtered_data))
+        page_items = reversed_data[start_idx:end_idx]
+        
+        for idx, item in page_items:
+            row = ctk.CTkFrame(self.scroll_log, fg_color="white", border_width=1, border_color="#eeeeee", corner_radius=8)
             row.pack(fill="x", pady=2, padx=2)
             
             info_frame = ctk.CTkFrame(row, fg_color="transparent")
             info_frame.pack(side="left", fill="both", expand=True, padx=10, pady=5)
             
-            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,} | {item['category']}".replace(",", "."), font=("Consolas", 12, "bold"), text_color=color, anchor="w")
+            cat_color = {"Cash": "#2e7d32", "Non Cash": "#fbc02d", "Uninput": "#d32f2f"}.get(item["category"], TEXT_COLOR)
+            
+            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,} | {item['category']}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
             lbl_val.pack(fill="x")
             
-            lbl_ts = ctk.CTkLabel(info_frame, text=f"TS: {item['timestamp']}", font=("Consolas", 9), text_color="#006600", anchor="w")
+            lbl_ts = ctk.CTkLabel(info_frame, text=f"Time: {item['timestamp']}", font=("Segoe UI", 9), text_color="grey", anchor="w")
             lbl_ts.pack(fill="x")
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=5)
-            ctk.CTkButton(btns, text="MOD", width=40, height=20, corner_radius=0, font=("Consolas", 9), command=lambda x=idx: self.edit_transaction(x)).pack(side="left", padx=2)
-            ctk.CTkButton(btns, text="DEL", width=40, height=20, corner_radius=0, font=("Consolas", 9), hover_color=UNINPUT_COLOR, command=lambda x=idx: self.delete_transaction(x)).pack(side="left", padx=2)
-            
-            total += item["amount"]
+            ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=4, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda x=idx: self.edit_transaction(x)).pack(side="left", padx=2)
+            ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=4, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda x=idx: self.delete_transaction(x)).pack(side="left", padx=2)
         
-        self.lbl_total.configure(text=f"BUFFER_TOTAL: Rp {total:,}".replace(",", "."))
-        self.lbl_count.configure(text=f"RECORDS: {len(self.transactions)}")
-        self.lbl_count.configure(text=f"RECORDS: {len(self.transactions)}")
+        self.lbl_page.configure(text=f"Page {self.current_page + 1} of {total_pages}")
+        
+        total_sum = sum(t["amount"] for i, t in filtered_data)
+        self.lbl_total.configure(text=f"{total_sum:,}.00".replace(",", "."))
+        self.lbl_count.configure(text=f"Entries: {len(self.transactions)}")
 
 if __name__ == "__main__":
-    app = CashCounterApp()
+    app = CashNoteApp()
     app.mainloop()
