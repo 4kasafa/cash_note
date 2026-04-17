@@ -235,7 +235,8 @@ class VaultTab(ctk.CTkFrame):
         self.search_entry.pack(fill="x", padx=20, pady=5)
         self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_vault_list())
 
-        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, scrollbar_width=0)
+        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+        self.scroll_vault._scrollbar.grid_forget()
         self.scroll_vault.pack(fill="both", expand=True, padx=20, pady=5)
 
         self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -360,7 +361,8 @@ class SessionTab(ctk.CTkFrame):
         self.btn_filter_unin = self.create_filter_btn("Uninput", "Uninput")
 
         # List Area
-        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, scrollbar_width=0)
+        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+        self.scroll_log._scrollbar.grid_forget()
         self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
 
         # Pagination
