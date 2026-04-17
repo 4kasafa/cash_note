@@ -14,12 +14,12 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 # Colors (Modern Payment UI Palette)
-BG_COLOR = "#f0f0f0"
+BG_COLOR = "#f8f9fc"
 SIDEBAR_COLOR = "#ffffff"
 CONSOLE_COLOR = "#ffffff"
-TEXT_COLOR = "#333333"
-ACCENT_COLOR = "#0078d7"
-BORDER_COLOR = "#cccccc"
+TEXT_COLOR = "#2d2d2d"
+ACCENT_COLOR = "#4e73df"
+BORDER_COLOR = "#d1d3e2"
 
 # Status Colors from Image
 STATUS_TOTAL_BG = "#ffff00" # Yellow
@@ -28,9 +28,9 @@ STATUS_CHANGE_BG = "#ffa500" # Orange
 DATA_DIR = "data"
 
 # Font Configuration
-MAIN_FONT = ("Segoe UI", 12)
-HEADER_FONT = ("Segoe UI", 18, "bold")
-DISPLAY_FONT = ("Segoe UI", 32, "bold")
+MAIN_FONT = ("Segoe UI", 11)
+HEADER_FONT = ("Segoe UI", 16, "bold")
+DISPLAY_FONT = ("Segoe UI", 24, "bold")
 SMALL_FONT = ("Segoe UI", 10)
 
 # Windows API Constants
@@ -48,7 +48,7 @@ class CashNoteApp(ctk.CTk):
         super().__init__()
 
         self.title("Cash Note")
-        self.geometry("550x850")
+        self.geometry("400x550")
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)
 
@@ -84,7 +84,7 @@ class CashNoteApp(ctk.CTk):
 
     def setup_main_layout(self):
         # Sidebar
-        self.sidebar = ctk.CTkFrame(self, width=60, fg_color=SIDEBAR_COLOR, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
+        self.sidebar = ctk.CTkFrame(self, width=50, fg_color=SIDEBAR_COLOR, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
         self.sidebar.pack(side="left", fill="y")
         
         self.btn_sys = self.create_nav_btn("SYS", "S")
@@ -97,7 +97,7 @@ class CashNoteApp(ctk.CTk):
         self.main_container.pack(side="top", fill="both", expand=True)
 
     def create_nav_btn(self, tab_id, text):
-        btn = ctk.CTkButton(self.sidebar, text=text, width=50, height=50, corner_radius=0, font=("Segoe UI", 14, "bold"), fg_color="transparent", border_width=0, text_color=ACCENT_COLOR, hover_color="#e5e5e5", command=lambda: self.show_tab(tab_id))
+        btn = ctk.CTkButton(self.sidebar, text=text, width=40, height=40, corner_radius=0, font=("Segoe UI", 12, "bold"), fg_color="transparent", border_width=0, text_color=ACCENT_COLOR, hover_color="#e5e5e5", command=lambda: self.show_tab(tab_id))
         btn.pack(pady=5)
         return btn
 
@@ -176,11 +176,11 @@ class SystemTab(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent", corner_radius=0)
         self.controller = controller
         
-        ctk.CTkLabel(self, text="Cash Note", font=("Segoe UI", 24, "bold"), text_color=ACCENT_COLOR).pack(pady=(60, 10))
+        ctk.CTkLabel(self, text="Cash Note", font=("Segoe UI", 24, "bold"), text_color=ACCENT_COLOR).pack(pady=(30, 10))
         ctk.CTkLabel(self, text="Professional Transaction Management", font=SMALL_FONT, text_color="grey").pack(pady=(0, 30))
 
         # Stats Section
-        self.stats_frame = ctk.CTkFrame(self, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+        self.stats_frame = ctk.CTkFrame(self, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
         self.stats_frame.pack(fill="x", padx=50, pady=20)
         
         self.add_stat("System Health", "Operational")
@@ -189,7 +189,7 @@ class SystemTab(ctk.CTkFrame):
         self.add_stat("Last Login", f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
         # Action Prompt
-        self.btn_new = ctk.CTkButton(self, text="Start New Session", font=HEADER_FONT, height=60, fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, command=self.init_session)
+        self.btn_new = ctk.CTkButton(self, text="Start New Session", font=HEADER_FONT, height=60, fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=self.init_session)
         self.btn_new.pack(fill="x", padx=50, pady=20)
         
         ctk.CTkLabel(self, text="Press [Space] to initialize", font=SMALL_FONT, text_color="grey").pack()
@@ -231,20 +231,20 @@ class VaultTab(ctk.CTkFrame):
     def setup_ui(self):
         ctk.CTkLabel(self, text="Vault Explorer", font=HEADER_FONT, text_color=TEXT_COLOR).pack(pady=10)
         
-        self.search_entry = ctk.CTkEntry(self, placeholder_text="Search by date (DD_MM_YYYY)...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=4)
+        self.search_entry = ctk.CTkEntry(self, placeholder_text="Search by date (DD_MM_YYYY)...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=0)
         self.search_entry.pack(fill="x", padx=20, pady=5)
         self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_vault_list())
 
-        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+        self.scroll_vault = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, scrollbar_width=0)
         self.scroll_vault.pack(fill="both", expand=True, padx=20, pady=5)
 
         self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.btn_frame.pack(fill="x", padx=20, pady=10)
         
-        self.btn_delete = ctk.CTkButton(self.btn_frame, text="Delete Selected", fg_color="#ff4444", text_color="white", corner_radius=8, font=MAIN_FONT, command=self.delete_selected)
+        self.btn_delete = ctk.CTkButton(self.btn_frame, text="Delete Selected", fg_color="#ff4444", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.delete_selected)
         self.btn_delete.pack(side="left", expand=True, padx=5)
         
-        self.btn_open = ctk.CTkButton(self.btn_frame, text="Open Session", fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, font=MAIN_FONT, command=self.open_selected)
+        self.btn_open = ctk.CTkButton(self.btn_frame, text="Open Session", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, font=MAIN_FONT, command=self.open_selected)
         self.btn_open.pack(side="right", expand=True, padx=5)
 
     def refresh_vault_list(self):
@@ -268,10 +268,10 @@ class VaultTab(ctk.CTkFrame):
                     count = len(data)
             except: total, count = 0, 0
 
-            item = ctk.CTkFrame(self.scroll_vault, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+            item = ctk.CTkFrame(self.scroll_vault, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=0)
             item.pack(fill="x", pady=2, padx=2)
             
-            cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=4, command=lambda p=f: self.toggle_selection(p))
+            cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=0, command=lambda p=f: self.toggle_selection(p))
             cb.pack(side="left", padx=10)
             
             info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Entries: {count}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
@@ -309,7 +309,7 @@ class SessionTab(ctk.CTkFrame):
         self.current_filter = "All"
         self.editing_index = None
         self.current_page = 0
-        self.page_size = 7
+        self.page_size = 3
         self.setup_ui()
 
     def setup_ui(self):
@@ -328,26 +328,27 @@ class SessionTab(ctk.CTkFrame):
         self.input_area = ctk.CTkFrame(self, fg_color="transparent")
         self.input_area.pack(fill="x", padx=20, pady=10)
         
-        self.entry_frame = ctk.CTkFrame(self.input_area, fg_color=STATUS_TOTAL_BG, border_width=2, border_color=BORDER_COLOR, corner_radius=8)
+        self.entry_frame = ctk.CTkFrame(self.input_area, fg_color=STATUS_TOTAL_BG, border_width=2, border_color=BORDER_COLOR, corner_radius=0)
         self.entry_frame.pack(fill="x", pady=(0, 10))
         
-        self.entry_amount = ctk.CTkEntry(self.entry_frame, placeholder_text="0.00", height=80, font=DISPLAY_FONT, justify="right", fg_color="transparent", border_width=0, text_color="black", corner_radius=0)
+        self.entry_amount = ctk.CTkEntry(self.entry_frame, placeholder_text="0.00", height=60, font=DISPLAY_FONT, justify="right", fg_color="transparent", border_width=0, text_color="black", corner_radius=0)
         self.entry_amount.pack(fill="x", padx=10)
         self.entry_amount.bind("<KeyRelease>", self.format_currency)
         self.entry_amount.bind("<Return>", lambda e: self.btn_cash.focus())
         
         self.btn_grid = ctk.CTkFrame(self.input_area, fg_color="transparent")
         self.btn_grid.pack(fill="x")
+        self.btn_grid.grid_columnconfigure((0, 1, 2), weight=1, uniform="btns")
         
-        self.btn_cash = self.create_input_btn(self.btn_grid, "Cash", "#2e7d32", "#e8f5e9", "Cash")
-        self.btn_non = self.create_input_btn(self.btn_grid, "Non Cash", "#fbc02d", "#fffde7", "Non Cash")
-        self.btn_unin = self.create_input_btn(self.btn_grid, "Uninput", "#d32f2f", "#ffebee", "Uninput")
+        self.btn_cash = self.create_input_btn(self.btn_grid, "Cash", "#2e7d32", "#e8f5e9", "Cash", 0)
+        self.btn_non = self.create_input_btn(self.btn_grid, "Non Cash", "#fbc02d", "#fffde7", "Non Cash", 1)
+        self.btn_unin = self.create_input_btn(self.btn_grid, "Uninput", "#d32f2f", "#ffebee", "Uninput", 2)
 
         # Edit Controls
         self.edit_frame = ctk.CTkFrame(self.input_area, fg_color="transparent")
-        self.btn_commit = ctk.CTkButton(self.edit_frame, text="Save Changes", fg_color=ACCENT_COLOR, text_color="white", corner_radius=8, font=MAIN_FONT, command=self.save_edit)
+        self.btn_commit = ctk.CTkButton(self.edit_frame, text="Save Changes", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, font=MAIN_FONT, command=self.save_edit)
         self.btn_commit.pack(side="left", expand=True, padx=2, fill="x")
-        ctk.CTkButton(self.edit_frame, text="Cancel", fg_color="#666666", text_color="white", corner_radius=8, font=MAIN_FONT, command=self.cancel_edit, width=80).pack(side="left", padx=2)
+        ctk.CTkButton(self.edit_frame, text="Cancel", fg_color="#666666", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.cancel_edit, width=80).pack(side="left", padx=2)
 
         # Filter Section
         self.filter_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -359,27 +360,27 @@ class SessionTab(ctk.CTkFrame):
         self.btn_filter_unin = self.create_filter_btn("Uninput", "Uninput")
 
         # List Area
-        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+        self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0, scrollbar_width=0)
         self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
 
         # Pagination
         self.pagination_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.pagination_frame.pack(fill="x", padx=20, pady=5)
         
-        self.btn_prev = ctk.CTkButton(self.pagination_frame, text="<", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=4, command=self.prev_page)
+        self.btn_prev = ctk.CTkButton(self.pagination_frame, text="<", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=0, command=self.prev_page)
         self.btn_prev.pack(side="left")
         
         self.lbl_page = ctk.CTkLabel(self.pagination_frame, text="Page 1 of 1", font=SMALL_FONT, text_color=TEXT_COLOR)
         self.lbl_page.pack(side="left", expand=True)
         
-        self.btn_next = ctk.CTkButton(self.pagination_frame, text=">", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=4, command=self.next_page)
+        self.btn_next = ctk.CTkButton(self.pagination_frame, text=">", width=30, height=25, font=("Segoe UI", 12, "bold"), fg_color="#e5e5e5", text_color="black", corner_radius=0, command=self.next_page)
         self.btn_next.pack(side="right")
 
         # Footer
         self.footer = ctk.CTkFrame(self, fg_color="transparent")
         self.footer.pack(fill="x", side="bottom", padx=20, pady=10)
         
-        self.total_display_frame = ctk.CTkFrame(self.footer, fg_color=STATUS_PAID_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
+        self.total_display_frame = ctk.CTkFrame(self.footer, fg_color=STATUS_PAID_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
         self.total_display_frame.pack(fill="x", pady=5)
         
         self.lbl_total_label = ctk.CTkLabel(self.total_display_frame, text="Total Amount :", font=("Segoe UI", 16), text_color="black")
@@ -402,13 +403,13 @@ class SessionTab(ctk.CTkFrame):
             self.refresh_list()
 
     def create_filter_btn(self, text, cat):
-        btn = ctk.CTkButton(self.filter_frame, text=text, width=80, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=4, command=lambda: self.set_filter(cat))
+        btn = ctk.CTkButton(self.filter_frame, text=text, width=80, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=0, command=lambda: self.set_filter(cat))
         btn.pack(side="left", padx=2)
         return btn
 
-    def create_input_btn(self, parent, text, color, bg, cat):
-        btn = ctk.CTkButton(parent, text=text, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 12, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=8, command=lambda: self.add_transaction(cat))
-        btn.pack(side="left", expand=True, padx=2)
+    def create_input_btn(self, parent, text, color, bg, cat, col):
+        btn = ctk.CTkButton(parent, text=text, height=38, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 11, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=0, command=lambda: self.add_transaction(cat))
+        btn.grid(row=0, column=col, sticky="ew", padx=2)
         
         def on_focus(e):
             btn.configure(border_width=2, border_color=ACCENT_COLOR)
@@ -521,7 +522,7 @@ class SessionTab(ctk.CTkFrame):
         page_items = reversed_data[start_idx:end_idx]
         
         for idx, item in page_items:
-            row = ctk.CTkFrame(self.scroll_log, fg_color="white", border_width=1, border_color="#eeeeee", corner_radius=8)
+            row = ctk.CTkFrame(self.scroll_log, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=0)
             row.pack(fill="x", pady=2, padx=2)
             
             info_frame = ctk.CTkFrame(row, fg_color="transparent")
@@ -537,8 +538,8 @@ class SessionTab(ctk.CTkFrame):
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=5)
-            ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=4, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda x=idx: self.edit_transaction(x)).pack(side="left", padx=2)
-            ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=4, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda x=idx: self.delete_transaction(x)).pack(side="left", padx=2)
+            ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda x=idx: self.edit_transaction(x)).pack(side="left", padx=2)
+            ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda x=idx: self.delete_transaction(x)).pack(side="left", padx=2)
         
         self.lbl_page.configure(text=f"Page {self.current_page + 1} of {total_pages}")
         
