@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import os
 
 # Appearance
 ctk.set_appearance_mode("light")
@@ -17,6 +18,8 @@ STATUS_TOTAL_BG = "#ffff00" # Yellow
 STATUS_PAID_BG = "#90ee90"  # Light Green
 STATUS_CHANGE_BG = "#ffa500" # Orange
 DATA_DIR = "data"
+USERS_FILE = os.path.join(DATA_DIR, "users.json")
+CALC_HISTORY_FILE = os.path.join(DATA_DIR, "calculate_history.json")
 
 # Font Configuration
 MAIN_FONT = ("Segoe UI", 11)

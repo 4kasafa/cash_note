@@ -1,6 +1,7 @@
 import ctypes
 from ctypes import wintypes
 import threading
+import time
 from constants import SW_RESTORE, HWND_TOPMOST, HWND_NOTOPMOST, SWP_NOMOVE, SWP_NOSIZE, WM_HOTKEY
 
 user32 = ctypes.windll.user32
@@ -10,6 +11,7 @@ class WindowsAPIManager:
         self.app = app
         self.my_hwnd = None
         self.previous_hwnd = None
+        self.last_f12_time = 0
 
     def init_windows_api(self):
         self.my_hwnd = user32.GetForegroundWindow()
@@ -20,12 +22,26 @@ class WindowsAPIManager:
 
     def start_hotkey_listener(self):
         def listen():
+            # Register Hotkeys
             user32.RegisterHotKey(None, 1, 0, 0x7B) # F12
             user32.RegisterHotKey(None, 2, 0, 0x79) # F10
+            user32.RegisterHotKey(None, 3, 0, 0x7A) # F11
+            
             msg = wintypes.MSG()
             while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
                 if msg.message == WM_HOTKEY:
-                    self.app.after(0, self.focus_app)
+                    hotkey_id = msg.wParam
+                    
+                    if hotkey_id == 1: # F12 logic
+                        current_time = time.time()
+                        # Detect double tap (interval < 0.4 seconds)
+                        if current_time - self.last_f12_time < 0.4:
+                            self.app.after(0, self.focus_app)
+                        self.last_f12_time = current_time
+                    
+                    else: # F10 or F11 (Single tap)
+                        self.app.after(0, self.focus_app)
+                        
                 user32.TranslateMessage(ctypes.byref(msg))
                 user32.DispatchMessageW(ctypes.byref(msg))
         

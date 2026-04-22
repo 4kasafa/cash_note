@@ -6,6 +6,8 @@ from windows_api_manager import WindowsAPIManager
 from tabs.system_tab import SystemTab
 from tabs.vault_tab import VaultTab
 from tabs.session_tab import SessionTab
+from tabs.user_tab import UserTab
+from tabs.calculate_tab import CalculateTab
 
 class CashNoteApp(ctk.CTk):
     def __init__(self):
@@ -13,7 +15,8 @@ class CashNoteApp(ctk.CTk):
 
         self.title("Cash Note")
         self.geometry("400x550")
-        self.resizable(False, False)
+        self.resizable(True, True)
+        self.minsize(400, 550)
         self.configure(fg_color=BG_COLOR)
 
         if not os.path.exists(DATA_DIR):
@@ -42,9 +45,13 @@ class CashNoteApp(ctk.CTk):
         self.bind_all("<Alt-s>", lambda e: self.show_tab("SYS"))
         self.bind_all("<Alt-v>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-a>", lambda e: self.show_tab("ACT"))
+        self.bind_all("<Alt-u>", lambda e: self.show_tab("USR"))
+        self.bind_all("<Alt-c>", lambda e: self.show_tab("CAL"))
         self.bind_all("<Alt-S>", lambda e: self.show_tab("SYS"))
         self.bind_all("<Alt-V>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-A>", lambda e: self.show_tab("ACT"))
+        self.bind_all("<Alt-U>", lambda e: self.show_tab("USR"))
+        self.bind_all("<Alt-C>", lambda e: self.show_tab("CAL"))
 
     def setup_main_layout(self):
         # Sidebar
@@ -53,6 +60,8 @@ class CashNoteApp(ctk.CTk):
         
         self.btn_sys = self.create_nav_btn("SYS", "S")
         self.btn_vlt = self.create_nav_btn("VLT", "V")
+        self.btn_usr = self.create_nav_btn("USR", "U")
+        self.btn_cal = self.create_nav_btn("CAL", "C")
         self.btn_act = self.create_nav_btn("ACT", "A")
         self.btn_act.pack_forget() # Hidden initially
         
@@ -69,6 +78,8 @@ class CashNoteApp(ctk.CTk):
         self.tabs["SYS"] = SystemTab(self.main_container, self)
         self.tabs["VLT"] = VaultTab(self.main_container, self)
         self.tabs["ACT"] = SessionTab(self.main_container, self)
+        self.tabs["USR"] = UserTab(self.main_container, self)
+        self.tabs["CAL"] = CalculateTab(self.main_container, self)
 
     def show_tab(self, tab_id):
         if tab_id == "ACT" and not self.current_file:
@@ -78,6 +89,8 @@ class CashNoteApp(ctk.CTk):
         # Refresh visuals
         self.btn_sys.configure(fg_color=ACCENT_COLOR if tab_id == "SYS" else "transparent", text_color="white" if tab_id == "SYS" else ACCENT_COLOR)
         self.btn_vlt.configure(fg_color=ACCENT_COLOR if tab_id == "VLT" else "transparent", text_color="white" if tab_id == "VLT" else ACCENT_COLOR)
+        self.btn_usr.configure(fg_color=ACCENT_COLOR if tab_id == "USR" else "transparent", text_color="white" if tab_id == "USR" else ACCENT_COLOR)
+        self.btn_cal.configure(fg_color=ACCENT_COLOR if tab_id == "CAL" else "transparent", text_color="white" if tab_id == "CAL" else ACCENT_COLOR)
         self.btn_act.configure(fg_color=ACCENT_COLOR if tab_id == "ACT" else "transparent", text_color="white" if tab_id == "ACT" else ACCENT_COLOR)
         
         # Hide current
@@ -92,6 +105,8 @@ class CashNoteApp(ctk.CTk):
             self.tabs["VLT"].refresh_vault_list()
         elif tab_id == "ACT":
             self.tabs["ACT"].on_activate()
+        elif tab_id == "CAL":
+            self.tabs["CAL"].on_activate()
 
     def return_focus(self):
         self.windows_api.return_focus()
