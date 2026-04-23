@@ -119,7 +119,7 @@ class CalculateTab(ctk.CTkFrame):
         self.receipt_paper = ctk.CTkFrame(self.receipt_scroll, fg_color="white", corner_radius=0, border_width=1, border_color="#ccc")
         self.receipt_paper.pack(pady=20)
         
-        self.lbl_receipt_text = ctk.CTkLabel(self.receipt_paper, text="", font=("Courier New", 12), justify="left", text_color="black", padx=20, pady=20)
+        self.lbl_receipt_text = ctk.CTkLabel(self.receipt_paper, text="", font=("Courier New", 12), justify="left", text_color="black", padx=0, pady=20)
         self.lbl_receipt_text.pack()
 
         self.preview_footer = ctk.CTkFrame(self.preview_view, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR)
@@ -218,8 +218,10 @@ class CalculateTab(ctk.CTkFrame):
 
     def update_receipt_preview(self):
         size = self.print_size_var.get()
+        # Max standard for most thermal printers
         char_width = 32 if size == "58" else 48
-        self.receipt_paper.configure(width=280 if size == "58" else 400)
+        # Adjust preview paper width to match char_width visually
+        self.receipt_paper.configure(width=280 if size == "58" else 420)
         
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
@@ -231,15 +233,15 @@ class CalculateTab(ctk.CTkFrame):
         lines = []
         lines.append("Toko Lay".center(width))
         lines.append("Laporan Penjualan Kasir".center(width))
-        lines.append("")
-        lines.append(f"Tgl    : {now.strftime('%d/%m/%Y')}")
-        lines.append(f"Cabang : {u['branch']}")
-        lines.append(f"Nama   : {u['name']}")
-        lines.append(f"ID     : {u['id']}")
-        lines.append(f"Shift  : {u['shift']}")
-        lines.append("")
-        lines.append("Jumlah Uang Fisik :")
         lines.append("-" * width)
+        lines.append(f"Tgl    : {now.strftime('%d/%m/%Y')}")
+        lines.append(f"Cabang : {u['branch'][:width-9]}")
+        lines.append(f"Nama   : {u['name'][:width-9]}")
+        lines.append(f"ID     : {u['id'][:width-9]}")
+        lines.append(f"Shift  : {u['shift'][:width-9]}")
+        lines.append("-" * width)
+        lines.append("Jumlah Uang Fisik :")
+        lines.append("")
         
         grand_total = 0
         for denom in self.denominations:
@@ -247,22 +249,31 @@ class CalculateTab(ctk.CTkFrame):
             if qty > 0:
                 subtotal = qty * denom
                 grand_total += subtotal
-                line = f"{denom:,} x {qty}".replace(",", ".")
-                sub_str = f"Rp {subtotal:,}".replace(",", ".")
-                space = width - len(line) - len(sub_str)
-                lines.append(f"{line}{' ' * space}{sub_str}")
+                
+                # Format: "100.000 x 10"
+                left_part = f"{denom:,} x {qty}".replace(",", ".")
+                # Format: "Rp 1.000.000"
+                right_part = f"Rp {subtotal:,}".replace(",", ".")
+                
+                space = width - len(left_part) - len(right_part)
+                if space < 1: # Fallback if line too long
+                    lines.append(left_part)
+                    lines.append(right_part.rjust(width))
+                else:
+                    lines.append(f"{left_part}{' ' * space}{right_part}")
         
         lines.append("-" * width)
-        total_str = f"Rp {grand_total:,}".replace(",", ".")
-        label = "Total :"
-        space = width - len(label) - len(total_str)
-        lines.append(f"{label}{' ' * space}{total_str}")
-        lines.append("_" * width)
-        lines.append("=" * width)
-        lines.append(f"Jam Cetak : {now.strftime('%H:%M:%S')}")
+        total_label = "GRAND TOTAL:"
+        total_val = f"Rp {grand_total:,}".replace(",", ".")
+        total_space = width - len(total_label) - len(total_val)
+        lines.append(f"{total_label}{' ' * total_space}{total_val}")
+        lines.append("-" * width)
+        
+        lines.append(f"Cetak: {now.strftime('%H:%M:%S')}")
         lines.append("")
         lines.append("Terimakasih".center(width))
         lines.append("شكراً جزيلاً".center(width))
+        lines.append("\n") # Extra space at bottom for physical cutter
         
         return "\n".join(lines)
 
