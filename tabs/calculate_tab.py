@@ -223,12 +223,17 @@ class CalculateTab(ctk.CTkFrame):
 
     def update_receipt_preview(self):
         size = self.print_size_var.get()
-        # Direct printing allows us to use standard 32/48 widths reliably
-        char_width = 32 if size == "58" else 48
+        char_width = self.get_receipt_char_width(for_print=False)
         self.receipt_paper.configure(width=280 if size == "58" else 420)
         
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
+
+    def get_receipt_char_width(self, for_print=False):
+        size = self.print_size_var.get()
+        if for_print:
+            return 28 if size == "58" else 40
+        return 32 if size == "58" else 48
 
     def format_key_value_line(self, label, value, width):
         left = f"{label}:"
@@ -258,6 +263,51 @@ class CalculateTab(ctk.CTkFrame):
             padded_lines.append(f"{pad}{clipped.ljust(inner_width)}{pad}")
 
         return padded_lines, inner_width
+
+    def has_arabic_text(self, text):
+        return any("\u0600" <= char <= "\u06FF" for char in text)
+
+    def build_escpos_arabic_line(self, text):
+        esc = b"\x1b"
+        command = bytearray()
+        command.extend(esc + b"a" + bytes([1]))
+
+        # Epson ESC/POS code pages commonly used for Arabic:
+        # 50 = WPC1256, 32 = PC720, 37 = PC864.
+        for code_page, encoding in ((50, "cp1256"), (32, "cp720"), (37, "cp864")):
+            try:
+                encoded = text.encode(encoding)
+                command.extend(esc + b"t" + bytes([code_page]))
+                command.extend(encoded + b"\n")
+                break
+            except UnicodeEncodeError:
+                continue
+        else:
+            command.extend(text.encode("ascii", errors="replace") + b"\n")
+
+        command.extend(esc + b"t" + bytes([0]))
+        command.extend(esc + b"a" + bytes([0]))
+        return bytes(command)
+
+    def build_escpos_receipt(self, width):
+        receipt_text = self.generate_receipt_text(width)
+        payload = bytearray()
+        payload.extend(b"\x1b@")  # Initialize printer.
+        payload.extend(b"\x1b\x61\x00")  # Left align.
+
+        for line in receipt_text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                payload.extend(b"\n")
+                continue
+
+            if self.has_arabic_text(stripped):
+                payload.extend(self.build_escpos_arabic_line(stripped))
+            else:
+                payload.extend(line.encode("ascii", errors="replace") + b"\n")
+
+        payload.extend(b"\n")
+        return bytes(payload)
 
     def generate_receipt_text(self, width):
         u = self.active_cashier_data
@@ -334,7 +384,7 @@ class CalculateTab(ctk.CTkFrame):
         with open(CALC_HISTORY_FILE, "w") as f: json.dump(history, f, indent=4)
 
         # Printing logic using win32print
-        char_width = 32 if self.print_size_var.get() == "58" else 48
+        char_width = self.get_receipt_char_width(for_print=True)
         receipt_text = self.generate_receipt_text(char_width)
         
         if win32print:
@@ -349,10 +399,7 @@ class CalculateTab(ctk.CTkFrame):
                     hJob = win32print.StartDocPrinter(hPrinter, 1, ("Struk Kasir", None, "RAW"))
                     try:
                         win32print.StartPagePrinter(hPrinter)
-                        # Use utf-8 for Arabic support. 
-                        # Note: Some older printers might still need specific ESC/POS commands 
-                        # to switch to Arabic code page, but utf-8 is the first step.
-                        win32print.WritePrinter(hPrinter, receipt_text.encode('utf-8', errors='replace'))
+                        win32print.WritePrinter(hPrinter, self.build_escpos_receipt(char_width))
                         win32print.EndPagePrinter(hPrinter)
                     finally:
                         win32print.EndDocPrinter(hPrinter)
