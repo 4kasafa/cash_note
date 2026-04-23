@@ -8,6 +8,11 @@ from constants import (HEADER_FONT, TEXT_COLOR, MAIN_FONT, CONSOLE_COLOR,
                        BORDER_COLOR, ACCENT_COLOR, USERS_FILE, CALC_HISTORY_FILE, 
                        SMALL_FONT, SIDEBAR_COLOR, STATUS_PAID_BG)
 
+try:
+    import win32print # type: ignore
+except ImportError:
+    win32print = None
+
 class CalculateTab(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent, fg_color="transparent", corner_radius=0)
@@ -218,9 +223,9 @@ class CalculateTab(ctk.CTkFrame):
 
     def update_receipt_preview(self):
         size = self.print_size_var.get()
-        # Reducing further to prevent cutting off on physical printer
-        char_width = 28 if size == "58" else 38
-        self.receipt_paper.configure(width=260 if size == "58" else 380)
+        # Direct printing allows us to use standard 32/48 widths reliably
+        char_width = 32 if size == "58" else 48
+        self.receipt_paper.configure(width=280 if size == "58" else 420)
         
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
@@ -272,7 +277,7 @@ class CalculateTab(ctk.CTkFrame):
         lines.append("")
         lines.append("Terimakasih".center(width))
         lines.append("شكراً جزيلاً".center(width))
-        lines.append("\n") # Extra space at bottom for physical cutter
+        lines.append("\n\n\n\n\n") # Extra lines for physical cutting
         
         return "\n".join(lines)
 
@@ -294,17 +299,44 @@ class CalculateTab(ctk.CTkFrame):
         history.append(data)
         with open(CALC_HISTORY_FILE, "w") as f: json.dump(history, f, indent=4)
 
-        # Printing logic
+        # Printing logic using win32print
         receipt_text = self.lbl_receipt_text.cget("text")
-        fd, path = tempfile.mkstemp(suffix=".txt")
-        try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as tmp:
-                tmp.write(receipt_text)
-            os.startfile(path, "print")
-        except Exception as e:
-            messagebox.showerror("Error Cetak", f"Gagal mengirim ke printer: {e}")
         
-        messagebox.showinfo("Sukses", "Data berhasil disimpan dan dikirim ke printer.")
+        if win32print:
+            try:
+                printer_name = win32print.GetDefaultPrinter()
+                if not printer_name:
+                    raise Exception("Printer default tidak ditemukan. Silakan set printer di Windows.")
+                
+                hPrinter = win32print.OpenPrinter(printer_name)
+                try:
+                    # 'RAW' mode is important for thermal printers
+                    hJob = win32print.StartDocPrinter(hPrinter, 1, ("Struk Kasir", None, "RAW"))
+                    try:
+                        win32print.StartPagePrinter(hPrinter)
+                        # Most thermal printers use 'cp437' or 'latin-1' for special chars
+                        win32print.WritePrinter(hPrinter, receipt_text.encode('cp437', errors='replace'))
+                        win32print.EndPagePrinter(hPrinter)
+                    finally:
+                        win32print.EndDocPrinter(hPrinter)
+                finally:
+                    win32print.ClosePrinter(hPrinter)
+                messagebox.showinfo("Sukses", f"Data berhasil dicetak ke {printer_name}")
+            except Exception as e:
+                # Show specific error to help debugging
+                error_msg = str(e)
+                messagebox.showerror("Error Cetak", f"Gagal mencetak: {error_msg}")
+        else:
+            # Fallback to old method if win32print is not available
+            messagebox.showwarning("Modul Hilang", "Modul win32print tidak terdeteksi. Menggunakan metode sistem...")
+            fd, path = tempfile.mkstemp(suffix=".txt")
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as tmp:
+                    tmp.write(receipt_text)
+                os.startfile(path, "print")
+            except Exception as e:
+                messagebox.showerror("Error Cetak", f"Gagal mengirim ke printer: {e}")
+        
         self.clear_all_silent()
         self.show_input_view()
 
