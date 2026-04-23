@@ -218,10 +218,9 @@ class CalculateTab(ctk.CTkFrame):
 
     def update_receipt_preview(self):
         size = self.print_size_var.get()
-        # Max standard for most thermal printers
-        char_width = 32 if size == "58" else 48
-        # Adjust preview paper width to match char_width visually
-        self.receipt_paper.configure(width=280 if size == "58" else 420)
+        # Reducing char_width to make the content more compact
+        char_width = 32 if size == "58" else 42
+        self.receipt_paper.configure(width=280 if size == "58" else 400)
         
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
@@ -263,7 +262,7 @@ class CalculateTab(ctk.CTkFrame):
                     lines.append(f"{left_part}{' ' * space}{right_part}")
         
         lines.append("-" * width)
-        total_label = "GRAND TOTAL:"
+        total_label = "Total:"
         total_val = f"Rp {grand_total:,}".replace(",", ".")
         total_space = width - len(total_label) - len(total_val)
         lines.append(f"{total_label}{' ' * total_space}{total_val}")
