@@ -230,54 +230,88 @@ class CalculateTab(ctk.CTkFrame):
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
 
+    def format_key_value_line(self, label, value, width):
+        left = f"{label}:"
+        right = str(value)
+        space = width - len(left) - len(right)
+        if space < 1:
+            return f"{left} {right}"
+        return f"{left}{' ' * space}{right}"
+
+    def format_amount_line(self, label, amount, width):
+        right = f"Rp {amount:,}".replace(",", ".")
+        space = width - len(label) - len(right)
+        if space < 1:
+            return f"{label} {right}"
+        return f"{label}{' ' * space}{right}"
+
+    def add_receipt_margin(self, lines, width, margin=2):
+        inner_width = max(width - (margin * 2), 10)
+        pad = " " * margin
+        padded_lines = []
+
+        for line in lines:
+            if not line:
+                padded_lines.append("")
+                continue
+            clipped = line[:inner_width]
+            padded_lines.append(f"{pad}{clipped.ljust(inner_width)}{pad}")
+
+        return padded_lines, inner_width
+
     def generate_receipt_text(self, width):
         u = self.active_cashier_data
         now = datetime.now()
+        act_tab = self.controller.tabs.get("ACT")
+        transactions = act_tab.transactions if act_tab else []
+        non_cash_total = sum(t["amount"] for t in transactions if t["category"] == "Non Cash")
+        physical_lines = []
+        physical_total = 0
+        margin = 2
+        inner_width = max(width - (margin * 2), 10)
         
         lines = []
-        lines.append("Toko Lay".center(width))
-        lines.append("Laporan Penjualan Kasir".center(width))
-        lines.append("-" * width)
-        lines.append(f"Tgl    : {now.strftime('%d/%m/%Y')}")
-        lines.append(f"Cabang : {u['branch'][:width-9]}")
-        lines.append(f"Nama   : {u['name'][:width-9]}")
-        lines.append(f"ID     : {u['id'][:width-9]}")
-        lines.append(f"Shift  : {u['shift'][:width-9]}")
-        lines.append("-" * width)
-        lines.append("Jumlah Uang Fisik :")
-        lines.append("")
+        lines.append("TOKO LAY".center(inner_width))
+        lines.append("Laporan Penjualan".center(inner_width))
+        lines.append("-" * inner_width)
+        lines.append(self.format_key_value_line("Tanggal", now.strftime('%d/%m/%Y'), inner_width))
+        lines.append(self.format_key_value_line("Cabang", u["branch"], inner_width))
+        lines.append(self.format_key_value_line("Shift", u["shift"], inner_width))
+        lines.append(self.format_key_value_line("Kasir", u["name"], inner_width))
+        lines.append(self.format_key_value_line("User ID", u["id"], inner_width))
         
-        grand_total = 0
         for denom in self.denominations:
             qty = int(self.inputs[denom].get() or 0)
             if qty > 0:
                 subtotal = qty * denom
-                grand_total += subtotal
+                physical_total += subtotal
                 
-                # Format: "100.000 x 10"
                 left_part = f"{denom:,} x {qty}".replace(",", ".")
-                # Format: "Rp 1.000.000"
                 right_part = f"Rp {subtotal:,}".replace(",", ".")
                 
-                space = width - len(left_part) - len(right_part)
-                if space < 1: # Fallback if line too long
-                    lines.append(left_part)
-                    lines.append(right_part.rjust(width))
+                space = inner_width - len(left_part) - len(right_part)
+                if space < 1:
+                    physical_lines.append(left_part)
+                    physical_lines.append(right_part.rjust(inner_width))
                 else:
-                    lines.append(f"{left_part}{' ' * space}{right_part}")
+                    physical_lines.append(f"{left_part}{' ' * space}{right_part}")
         
-        lines.append("-" * width)
-        total_label = "Total:"
-        total_val = f"Rp {grand_total:,}".replace(",", ".")
-        total_space = width - len(total_label) - len(total_val)
-        lines.append(f"{total_label}{' ' * total_space}{total_val}")
-        lines.append("-" * width)
-        
-        lines.append(f"Cetak: {now.strftime('%H:%M:%S')}")
-        lines.append("")
-        lines.append("Terimakasih".center(width))
-        lines.append("شكراً جزيلاً".center(width))
-        lines.append("\n\n\n\n\n") # Extra lines for physical cutting
+        sales_total = physical_total + non_cash_total
+        lines.append("_" * inner_width)
+        lines.append(self.format_amount_line("Total Penjualan", sales_total, inner_width))
+        lines.append(self.format_amount_line("Non Tunai", non_cash_total, inner_width))
+        lines.append(self.format_amount_line("Pengeluaran", 0, inner_width))
+        lines.append("_" * inner_width)
+        lines.append("Rincian Uang Fisik:".center(inner_width))
+        lines.extend(physical_lines)
+        lines.append("_" * inner_width)
+        lines.append(self.format_amount_line("Total Uang Fisik", physical_total, inner_width))
+        lines.append("_" * inner_width)
+        lines.append("-" * inner_width)
+        lines.append('"شكراً جزيلاً"'.center(inner_width))
+        lines.append(now.strftime('%H:%M:%S').center(inner_width))
+
+        lines, _ = self.add_receipt_margin(lines, width, margin)
         
         return "\n".join(lines)
 
@@ -300,7 +334,8 @@ class CalculateTab(ctk.CTkFrame):
         with open(CALC_HISTORY_FILE, "w") as f: json.dump(history, f, indent=4)
 
         # Printing logic using win32print
-        receipt_text = self.lbl_receipt_text.cget("text")
+        char_width = 32 if self.print_size_var.get() == "58" else 48
+        receipt_text = self.generate_receipt_text(char_width)
         
         if win32print:
             try:

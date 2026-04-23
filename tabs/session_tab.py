@@ -15,6 +15,8 @@ class SessionTab(ctk.CTkFrame):
         self.editing_index = None
         self.current_page = 0
         self.page_size = 3
+        self.action_buttons = []
+        self.item_buttons = []
         self.setup_ui()
 
     def setup_ui(self):
@@ -111,11 +113,13 @@ class SessionTab(ctk.CTkFrame):
     def create_filter_btn(self, text, cat):
         btn = ctk.CTkButton(self.filter_frame, text=text, width=80, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=0, command=lambda: self.set_filter(cat))
         btn.pack(side="left", padx=2)
+        self.action_buttons.append(btn)
         return btn
 
     def create_input_btn(self, parent, text, color, bg, cat, col):
         btn = ctk.CTkButton(parent, text=text, height=38, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 11, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=0, command=lambda: self.add_transaction(cat))
         btn.grid(row=0, column=col, sticky="ew", padx=2)
+        self.action_buttons.append(btn)
         
         def on_focus(e):
             btn.configure(border_width=2, border_color=ACCENT_COLOR)
@@ -211,6 +215,7 @@ class SessionTab(ctk.CTkFrame):
         self.btn_grid.pack(fill="x")
 
     def refresh_list(self):
+        self.item_buttons = []
         for w in self.scroll_log.winfo_children(): w.destroy()
         
         indexed_data = list(enumerate(self.transactions))
@@ -244,8 +249,11 @@ class SessionTab(ctk.CTkFrame):
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=5)
-            ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda x=idx: self.edit_transaction(x)).pack(side="left", padx=2)
-            ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda x=idx: self.delete_transaction(x)).pack(side="left", padx=2)
+            edit_btn = ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda x=idx: self.edit_transaction(x))
+            delete_btn = ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda x=idx: self.delete_transaction(x))
+            edit_btn.pack(side="left", padx=2)
+            delete_btn.pack(side="left", padx=2)
+            self.item_buttons.extend([edit_btn, delete_btn])
         
         self.lbl_page.configure(text=f"Page {self.current_page + 1} of {total_pages}")
         
