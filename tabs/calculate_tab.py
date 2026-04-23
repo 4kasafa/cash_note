@@ -218,9 +218,9 @@ class CalculateTab(ctk.CTkFrame):
 
     def update_receipt_preview(self):
         size = self.print_size_var.get()
-        # Reducing char_width to make the content more compact
-        char_width = 32 if size == "58" else 42
-        self.receipt_paper.configure(width=280 if size == "58" else 400)
+        # Reducing further to prevent cutting off on physical printer
+        char_width = 28 if size == "58" else 38
+        self.receipt_paper.configure(width=260 if size == "58" else 380)
         
         receipt_text = self.generate_receipt_text(char_width)
         self.lbl_receipt_text.configure(text=receipt_text)
