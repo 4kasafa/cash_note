@@ -310,12 +310,14 @@ class CalculateTab(ctk.CTkFrame):
                 
                 hPrinter = win32print.OpenPrinter(printer_name)
                 try:
-                    # 'RAW' mode is important for thermal printers
+                    # 'RAW' mode sends data directly to printer
                     hJob = win32print.StartDocPrinter(hPrinter, 1, ("Struk Kasir", None, "RAW"))
                     try:
                         win32print.StartPagePrinter(hPrinter)
-                        # Most thermal printers use 'cp437' or 'latin-1' for special chars
-                        win32print.WritePrinter(hPrinter, receipt_text.encode('cp437', errors='replace'))
+                        # Use utf-8 for Arabic support. 
+                        # Note: Some older printers might still need specific ESC/POS commands 
+                        # to switch to Arabic code page, but utf-8 is the first step.
+                        win32print.WritePrinter(hPrinter, receipt_text.encode('utf-8', errors='replace'))
                         win32print.EndPagePrinter(hPrinter)
                     finally:
                         win32print.EndDocPrinter(hPrinter)
