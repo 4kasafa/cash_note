@@ -13,10 +13,12 @@ class SessionTab(ctk.CTkFrame):
         self.transactions = []
         self.current_filter = "All"
         self.editing_index = None
+        self.editing_category = None
         self.current_page = 0
         self.page_size = 3
         self.action_buttons = []
         self.item_buttons = []
+        self.uninput_detail_idx = None
         self.setup_ui()
 
     def setup_ui(self):
@@ -53,9 +55,7 @@ class SessionTab(ctk.CTkFrame):
 
         # Edit Controls
         self.edit_frame = ctk.CTkFrame(self.input_area, fg_color="transparent")
-        self.btn_commit = ctk.CTkButton(self.edit_frame, text="Save Changes", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, font=MAIN_FONT, command=self.save_edit)
-        self.btn_commit.pack(side="left", expand=True, padx=2, fill="x")
-        ctk.CTkButton(self.edit_frame, text="Cancel", fg_color="#666666", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.cancel_edit, width=80).pack(side="left", padx=2)
+        ctk.CTkButton(self.edit_frame, text="Cancel", fg_color="#666666", text_color="white", corner_radius=0, font=MAIN_FONT, height=38, command=self.cancel_edit).pack(fill="x")
 
         # Filter Section
         self.filter_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -70,6 +70,18 @@ class SessionTab(ctk.CTkFrame):
         self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
         self.scroll_log._scrollbar.grid_forget()
         self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
+
+        # Uninput Detail View (hidden by default)
+        self.ud_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.ud_header = ctk.CTkFrame(self.ud_frame, fg_color=SIDEBAR_COLOR, height=40, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
+        self.ud_header.pack(fill="x", padx=10, pady=(10, 0))
+        self.ud_header.pack_propagate(False)
+        ctk.CTkButton(self.ud_header, text="< Back", width=60, fg_color="#666666", text_color="white", corner_radius=0, font=SMALL_FONT, command=self.hide_uninput_detail).pack(side="left", padx=5)
+        self.ud_title = ctk.CTkLabel(self.ud_header, text="Uninput Items", font=("Segoe UI", 10, "bold"), text_color=TEXT_COLOR)
+        self.ud_title.pack(side="left", expand=True)
+        self.ud_scroll = ctk.CTkScrollableFrame(self.ud_frame, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+        self.ud_scroll._scrollbar.grid_forget()
+        self.ud_scroll.pack(fill="both", expand=True, padx=20, pady=5)
 
         # Pagination
         self.pagination_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -144,6 +156,72 @@ class SessionTab(ctk.CTkFrame):
             is_active = cat == self.current_filter
             btn.configure(fg_color=ACCENT_COLOR if is_active else "#e5e5e5", text_color="white" if is_active else "black")
 
+    def update_edit_visuals(self):
+        btns = {"Cash": self.btn_cash, "Non Cash": self.btn_non, "Uninput": self.btn_unin}
+        for cat, btn in btns.items():
+            if self.editing_index is not None and cat == self.editing_category:
+                btn.configure(border_width=2, border_color=ACCENT_COLOR)
+            else:
+                btn.configure(border_width=1, border_color=BORDER_COLOR)
+
+    def show_uninput_popup(self, existing_items=None):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Input Items")
+        dialog.geometry("400x350")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - 400) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - 350) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        result = None
+        entries = []
+
+        items_frame = ctk.CTkScrollableFrame(dialog, fg_color="transparent")
+        items_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        def add_entry(val=""):
+            f = ctk.CTkFrame(items_frame, fg_color="transparent")
+            f.pack(fill="x", pady=2)
+            ctk.CTkLabel(f, text="Item:", font=MAIN_FONT, text_color=TEXT_COLOR, width=40).pack(side="left")
+            entry = ctk.CTkEntry(f, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0)
+            entry.pack(side="left", fill="x", expand=True, padx=5)
+            entry.insert(0, val)
+            entry.bind("<Return>", lambda e: (add_entry(), entries[-1].focus()))
+            entries.append(entry)
+
+        def on_save():
+            nonlocal result
+            items = [e.get().strip() for e in entries if e.get().strip()]
+            if not items:
+                messagebox.showwarning("Empty", "Please add at least one item.")
+                return
+            result = items
+            dialog.destroy()
+
+        def on_cancel():
+            dialog.destroy()
+
+        if existing_items:
+            for item in existing_items:
+                add_entry(item)
+        else:
+            add_entry()
+
+        if entries:
+            entries[0].focus()
+
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=10)
+        ctk.CTkButton(btn_frame, text="+ Add", fg_color="#666666", text_color="white", corner_radius=0, command=add_entry).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Save", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=on_save).pack(side="right", padx=5)
+        ctk.CTkButton(btn_frame, text="Cancel", fg_color="#ff4444", text_color="white", corner_radius=0, command=on_cancel).pack(side="right", padx=5)
+
+        dialog.wait_window()
+        return result
+
     def on_activate(self):
         self.entry_amount.focus_set()
         if self.file_path:
@@ -171,13 +249,42 @@ class SessionTab(ctk.CTkFrame):
         self.entry_amount.delete(0, "end"); self.entry_amount.insert(0, formatted)
 
     def add_transaction(self, cat):
+        if self.editing_index is not None:
+            old_cat = self.transactions[self.editing_index]["category"]
+            val_str = self.entry_amount.get().replace(".", "")
+
+            if cat == "Uninput" and old_cat != "Uninput":
+                items = self.show_uninput_popup()
+                if items is None:
+                    return
+                self.transactions[self.editing_index]["items"] = items
+
+            if old_cat == "Uninput" and cat != "Uninput":
+                self.transactions[self.editing_index].pop("items", None)
+
+            if val_str:
+                self.transactions[self.editing_index]["amount"] = int(val_str)
+            self.transactions[self.editing_index]["category"] = cat
+            self.save_session()
+            self.cancel_edit()
+            self.refresh_list()
+            return
+
+        if cat == "Uninput":
+            items = self.show_uninput_popup()
+            if items is None:
+                return
+
         val_str = self.entry_amount.get().replace(".", "")
         if not val_str: return
-        self.transactions.append({
+        txn = {
             "amount": int(val_str),
             "category": cat,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
+        }
+        if cat == "Uninput":
+            txn["items"] = items
+        self.transactions.append(txn)
         self.save_session()
         self.entry_amount.delete(0, "end")
         self.current_page = 0
@@ -193,26 +300,51 @@ class SessionTab(ctk.CTkFrame):
 
     def edit_transaction(self, idx):
         self.editing_index = idx
+        self.editing_category = self.transactions[idx]["category"]
         item = self.transactions[idx]
         self.entry_amount.delete(0, "end")
         self.entry_amount.insert(0, f"{item['amount']:,}".replace(",", "."))
-        self.btn_grid.pack_forget()
         self.edit_frame.pack(fill="x")
         self.entry_amount.focus()
-
-    def save_edit(self):
-        val = self.entry_amount.get().replace(".", "")
-        if val:
-            self.transactions[self.editing_index]["amount"] = int(val)
-            self.save_session()
-            self.cancel_edit()
-            self.refresh_list()
+        self.update_edit_visuals()
 
     def cancel_edit(self):
         self.editing_index = None
+        self.editing_category = None
         self.entry_amount.delete(0, "end")
         self.edit_frame.pack_forget()
-        self.btn_grid.pack(fill="x")
+        self.update_edit_visuals()
+
+    def show_uninput_detail(self, idx):
+        self.uninput_detail_idx = idx
+        item = self.transactions[idx]
+        items = item.get("items", [])
+        self.ud_title.configure(text=f"Items - Rp {item['amount']:,}".replace(",", "."))
+
+        for w in self.ud_scroll.winfo_children():
+            w.destroy()
+
+        for i, text in enumerate(items):
+            row = ctk.CTkFrame(self.ud_scroll, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+            row.pack(fill="x", pady=2, padx=2)
+            ctk.CTkLabel(row, text=f"{i+1}.", font=MAIN_FONT, text_color=TEXT_COLOR, width=30).pack(side="left", padx=5, pady=5)
+            ctk.CTkLabel(row, text=text, font=MAIN_FONT, text_color=TEXT_COLOR, anchor="w").pack(side="left", fill="x", expand=True, padx=5, pady=5)
+            ctk.CTkButton(row, text="📋", width=30, height=25, corner_radius=0, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda t=text: self.copy_clipboard(t)).pack(side="right", padx=5)
+
+        self.scroll_log.pack_forget()
+        self.pagination_frame.pack_forget()
+        self.ud_frame.pack(fill="both", expand=True)
+
+    def hide_uninput_detail(self):
+        self.uninput_detail_idx = None
+        self.ud_frame.pack_forget()
+        self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
+        self.pagination_frame.pack(fill="x", padx=20, pady=5)
+        self.refresh_list()
+
+    def copy_clipboard(self, text):
+        self.clipboard_clear()
+        self.clipboard_append(text)
 
     def refresh_list(self):
         self.item_buttons = []
@@ -240,12 +372,23 @@ class SessionTab(ctk.CTkFrame):
             info_frame.pack(side="left", fill="both", expand=True, padx=10, pady=5)
             
             cat_color = {"Cash": "#2e7d32", "Non Cash": "#fbc02d", "Uninput": "#d32f2f"}.get(item["category"], TEXT_COLOR)
-            
-            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,} | {item['category']}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
+
+            cat_label = item["category"]
+            if item["category"] == "Uninput":
+                ic = len(item.get("items", []))
+                cat_label = f"Uninput ({ic} items)"
+
+            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,} | {cat_label}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
             lbl_val.pack(fill="x")
-            
+
             lbl_ts = ctk.CTkLabel(info_frame, text=f"Time: {item['timestamp']}", font=("Segoe UI", 9), text_color="grey", anchor="w")
             lbl_ts.pack(fill="x")
+
+            if item["category"] == "Uninput":
+                row.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
+                info_frame.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
+                lbl_val.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
+                lbl_ts.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=5)

@@ -1,9 +1,8 @@
 import customtkinter as ctk
 import os
 from tkinter import messagebox
-from constants import BG_COLOR, SIDEBAR_COLOR, BORDER_COLOR, ACCENT_COLOR, DATA_DIR
+from constants import BG_COLOR, BORDER_COLOR, ACCENT_COLOR, DATA_DIR
 from windows_api_manager import WindowsAPIManager
-from tabs.system_tab import SystemTab
 from tabs.vault_tab import VaultTab
 from tabs.session_tab import SessionTab
 from tabs.user_tab import UserTab
@@ -25,30 +24,28 @@ class CashNoteApp(ctk.CTk):
 
         # Global State
         self.current_file = None
-        self.active_tab = "SYS"
-        
+        self.active_tab = "CAL"
+
         # Managers
         self.windows_api = WindowsAPIManager(self)
 
         # Main Layout
         self.setup_main_layout()
-        
+
         # Tabs
         self.tabs = {}
         self.create_tabs()
-        self.show_tab("SYS")
+        self.show_tab("CAL")
 
         # Windows API Initialization
         self.after(500, self.windows_api.init_windows_api)
         self.windows_api.start_hotkey_listener()
 
         # Keyboard Bindings (Global)
-        self.bind_all("<Alt-s>", lambda e: self.show_tab("SYS"))
         self.bind_all("<Alt-v>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-a>", lambda e: self.show_tab("ACT"))
         self.bind_all("<Alt-u>", lambda e: self.show_tab("USR"))
         self.bind_all("<Alt-c>", lambda e: self.show_tab("CAL"))
-        self.bind_all("<Alt-S>", lambda e: self.show_tab("SYS"))
         self.bind_all("<Alt-V>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-A>", lambda e: self.show_tab("ACT"))
         self.bind_all("<Alt-U>", lambda e: self.show_tab("USR"))
@@ -57,30 +54,13 @@ class CashNoteApp(ctk.CTk):
         self.after(0, self.update_content_width)
 
     def setup_main_layout(self):
-        # Sidebar
-        self.sidebar = ctk.CTkFrame(self, width=50, fg_color=SIDEBAR_COLOR, corner_radius=0, border_width=1, border_color=BORDER_COLOR)
-        self.sidebar.pack(side="left", fill="y")
-        
-        self.btn_sys = self.create_nav_btn("SYS", "S")
-        self.btn_vlt = self.create_nav_btn("VLT", "V")
-        self.btn_usr = self.create_nav_btn("USR", "U")
-        self.btn_cal = self.create_nav_btn("CAL", "C")
-        self.btn_act = self.create_nav_btn("ACT", "A")
-        self.btn_act.pack_forget() # Hidden initially
-        
         # Main Work Area
         self.main_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.main_container.pack(side="top", fill="both", expand=True)
         self.content_shell = ctk.CTkFrame(self.main_container, fg_color="transparent", corner_radius=0)
         self.content_shell.place(relx=0.5, rely=0, anchor="n")
 
-    def create_nav_btn(self, tab_id, text):
-        btn = ctk.CTkButton(self.sidebar, text=text, width=40, height=40, corner_radius=0, font=("Segoe UI", 12, "bold"), fg_color="transparent", border_width=0, text_color=ACCENT_COLOR, hover_color="#e5e5e5", command=lambda: self.show_tab(tab_id))
-        btn.pack(pady=5)
-        return btn
-
     def create_tabs(self):
-        self.tabs["SYS"] = SystemTab(self.content_shell, self)
         self.tabs["VLT"] = VaultTab(self.content_shell, self)
         self.tabs["ACT"] = SessionTab(self.content_shell, self)
         self.tabs["USR"] = UserTab(self.content_shell, self)
@@ -91,21 +71,14 @@ class CashNoteApp(ctk.CTk):
             messagebox.showwarning("Access Denied", "Please start a new session or open an existing one first.")
             return
 
-        # Refresh visuals
-        self.btn_sys.configure(fg_color=ACCENT_COLOR if tab_id == "SYS" else "transparent", text_color="white" if tab_id == "SYS" else ACCENT_COLOR)
-        self.btn_vlt.configure(fg_color=ACCENT_COLOR if tab_id == "VLT" else "transparent", text_color="white" if tab_id == "VLT" else ACCENT_COLOR)
-        self.btn_usr.configure(fg_color=ACCENT_COLOR if tab_id == "USR" else "transparent", text_color="white" if tab_id == "USR" else ACCENT_COLOR)
-        self.btn_cal.configure(fg_color=ACCENT_COLOR if tab_id == "CAL" else "transparent", text_color="white" if tab_id == "CAL" else ACCENT_COLOR)
-        self.btn_act.configure(fg_color=ACCENT_COLOR if tab_id == "ACT" else "transparent", text_color="white" if tab_id == "ACT" else ACCENT_COLOR)
-        
         # Hide current
         for tab in self.tabs.values():
             tab.pack_forget()
-        
+
         # Show new
         self.tabs[tab_id].pack(fill="both", expand=True)
         self.active_tab = tab_id
-        
+
         if tab_id == "VLT":
             self.tabs["VLT"].refresh_vault_list()
         elif tab_id == "ACT":

@@ -94,7 +94,6 @@ class CalculateTab(ctk.CTkFrame):
         self.lbl_grand_total.pack(side="right", padx=15, pady=10)
         
         self.comp_frame = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
-        self.comp_frame.pack(fill="x", pady=(0, 10))
         
         self.sys_row = ctk.CTkFrame(self.comp_frame, fg_color="transparent")
         self.sys_row.pack(fill="x")
@@ -108,12 +107,12 @@ class CalculateTab(ctk.CTkFrame):
         self.lbl_diff = ctk.CTkLabel(self.diff_row, text="Rp 0", font=("Segoe UI", 12, "bold"), text_color=TEXT_COLOR)
         self.lbl_diff.pack(side="right", padx=5)
         
-        btn_box = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
-        btn_box.pack(fill="x")
+        self.btn_box = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
+        self.btn_box.pack(fill="x")
         
-        self.btn_preview = ctk.CTkButton(btn_box, text="Preview", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.show_preview)
+        self.btn_preview = ctk.CTkButton(self.btn_box, text="Preview", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.show_preview)
         self.btn_preview.pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(btn_box, text="Clear All", fg_color="#666666", text_color="white", corner_radius=5, command=self.clear_all).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(self.btn_box, text="Clear All", fg_color="#666666", text_color="white", corner_radius=5, command=self.clear_all).pack(side="left", expand=True, padx=5)
 
         # --- MODE PREVIEW ---
         self.preview_view = ctk.CTkFrame(self.main_container, fg_color="transparent")
@@ -179,6 +178,7 @@ class CalculateTab(ctk.CTkFrame):
         except: physical_total = 0
         act_tab = self.controller.tabs.get("ACT")
         if act_tab and act_tab.file_path:
+            self.comp_frame.pack(fill="x", pady=(0, 10), before=self.btn_box)
             sys_cash_total = sum(t["amount"] for t in act_tab.transactions if t["category"] == "Cash")
             self.lbl_sys_total.configure(text=f"Rp {sys_cash_total:,}".replace(",", "."), text_color=TEXT_COLOR)
             diff = physical_total - sys_cash_total
@@ -192,8 +192,7 @@ class CalculateTab(ctk.CTkFrame):
                 self.lbl_diff.configure(text_color=TEXT_COLOR)
             self.lbl_diff.configure(text=diff_text)
         else:
-            self.lbl_sys_total.configure(text="No Active Session", text_color="grey")
-            self.lbl_diff.configure(text="Rp 0", text_color="grey")
+            self.comp_frame.pack_forget()
 
     def show_preview(self):
         cashier_name = self.cashier_var.get()

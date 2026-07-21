@@ -2,6 +2,7 @@ import customtkinter as ctk
 import os
 import glob
 import json
+from datetime import datetime
 from tkinter import messagebox
 from constants import HEADER_FONT, TEXT_COLOR, MAIN_FONT, CONSOLE_COLOR, BORDER_COLOR, ACCENT_COLOR, DATA_DIR
 
@@ -25,7 +26,10 @@ class VaultTab(ctk.CTkFrame):
 
         self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.btn_frame.pack(fill="x", padx=20, pady=10)
-        
+
+        self.btn_new = ctk.CTkButton(self.btn_frame, text="New Session", fg_color="#2e7d32", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.init_session)
+        self.btn_new.pack(side="left", expand=True, padx=5)
+
         self.btn_delete = ctk.CTkButton(self.btn_frame, text="Delete Selected", fg_color="#ff4444", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.delete_selected)
         self.btn_delete.pack(side="left", expand=True, padx=5)
         
@@ -82,5 +86,23 @@ class VaultTab(ctk.CTkFrame):
         self.controller.current_file = path
         self.controller.tabs["ACT"].file_path = path
         self.controller.tabs["ACT"].load_session()
-        self.controller.btn_act.pack(pady=5)
+        self.controller.show_tab("ACT")
+
+    def init_session(self):
+        today = datetime.now().strftime("%d_%m_%Y")
+        base_name = f"data_{today}"
+        file_path = os.path.join(DATA_DIR, f"{base_name}.json")
+
+        if os.path.exists(file_path):
+            counter = 1
+            while True:
+                suffix = f"_{counter:03d}"
+                file_path = os.path.join(DATA_DIR, f"{base_name}{suffix}.json")
+                if not os.path.exists(file_path):
+                    break
+                counter += 1
+
+        self.controller.current_file = file_path
+        self.controller.tabs["ACT"].file_path = file_path
+        self.controller.tabs["ACT"].load_session()
         self.controller.show_tab("ACT")
