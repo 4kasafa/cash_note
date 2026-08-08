@@ -190,6 +190,7 @@ class SessionTab(ctk.CTkFrame):
             entry.pack(side="left", fill="x", expand=True, padx=5)
             entry.insert(0, val)
             entry.bind("<Return>", lambda e: (add_entry(), entries[-1].focus()))
+            entry.bind("<Tab>", lambda e: save_btn.focus())
             entries.append(entry)
 
         def on_save():
@@ -216,7 +217,9 @@ class SessionTab(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
         btn_frame.pack(fill="x", padx=20, pady=10)
         ctk.CTkButton(btn_frame, text="+ Add", fg_color="#666666", text_color="white", corner_radius=0, command=add_entry).pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="Save", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=on_save).pack(side="right", padx=5)
+        save_btn = ctk.CTkButton(btn_frame, text="Save", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=on_save)
+        save_btn.pack(side="right", padx=5)
+        save_btn.bind("<Return>", lambda e: on_save())
         ctk.CTkButton(btn_frame, text="Cancel", fg_color="#ff4444", text_color="white", corner_radius=0, command=on_cancel).pack(side="right", padx=5)
 
         dialog.wait_window()
