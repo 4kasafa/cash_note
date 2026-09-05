@@ -7,6 +7,7 @@ from tabs.vault_tab import VaultTab
 from tabs.session_tab import SessionTab
 from tabs.user_tab import UserTab
 from tabs.calculate_tab import CalculateTab
+from tabs.modal_tab import ModalTab
 
 class CashNoteApp(ctk.CTk):
     def __init__(self):
@@ -46,10 +47,13 @@ class CashNoteApp(ctk.CTk):
         self.bind_all("<Alt-a>", lambda e: self.show_tab("ACT"))
         self.bind_all("<Alt-u>", lambda e: self.show_tab("USR"))
         self.bind_all("<Alt-c>", lambda e: self.show_tab("CAL"))
+        self.bind_all("<Alt-m>", lambda e: self.show_tab("MOD"))
         self.bind_all("<Alt-V>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-A>", lambda e: self.show_tab("ACT"))
         self.bind_all("<Alt-U>", lambda e: self.show_tab("USR"))
         self.bind_all("<Alt-C>", lambda e: self.show_tab("CAL"))
+        self.bind_all("<Alt-M>", lambda e: self.show_tab("MOD"))
+        self.bind_all("<Escape>", self.handle_escape)
         self.main_container.bind("<Configure>", self.update_content_width)
         self.after(0, self.update_content_width)
 
@@ -65,10 +69,11 @@ class CashNoteApp(ctk.CTk):
         self.tabs["ACT"] = SessionTab(self.content_shell, self)
         self.tabs["USR"] = UserTab(self.content_shell, self)
         self.tabs["CAL"] = CalculateTab(self.content_shell, self)
+        self.tabs["MOD"] = ModalTab(self.content_shell, self)
 
     def show_tab(self, tab_id):
         if tab_id == "ACT" and not self.current_file:
-            messagebox.showwarning("Access Denied", "Please start a new session or open an existing one first.")
+            messagebox.showwarning("Akses Ditolak", "Silakan mulai sesi baru atau buka sesi yang sudah ada terlebih dahulu.")
             return
 
         # Hide current
@@ -85,6 +90,22 @@ class CashNoteApp(ctk.CTk):
             self.tabs["ACT"].on_activate()
         elif tab_id == "CAL":
             self.tabs["CAL"].on_activate()
+        elif tab_id == "USR":
+            self.tabs["USR"].on_activate()
+        elif tab_id == "MOD":
+            self.tabs["MOD"].on_activate()
+
+    def handle_escape(self, event=None):
+        if self.active_tab == "USR":
+            usr_tab = self.tabs.get("USR")
+            if usr_tab and usr_tab.form_view.winfo_ismapped():
+                usr_tab.show_list_view()
+            else:
+                self.show_tab("CAL")
+        elif self.active_tab == "CAL":
+            cal_tab = self.tabs.get("CAL")
+            if cal_tab and cal_tab.preview_view.winfo_ismapped():
+                cal_tab.show_input_view()
 
     def update_content_width(self, event=None):
         width = min(self.main_container.winfo_width(), self.max_content_width)

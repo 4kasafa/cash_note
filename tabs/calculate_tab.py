@@ -53,8 +53,26 @@ class CalculateTab(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self.input_view, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         self.header_frame.pack(fill="x", padx=20, pady=10)
         
+        # Header Top: Date & Shortcut to User Tab
+        self.header_top = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        self.header_top.pack(fill="x", padx=20, pady=(12, 6))
+
         date_str = datetime.now().strftime("%d/%m/%Y")
-        ctk.CTkLabel(self.header_frame, text=f"Date: {date_str}", font=("Segoe UI", 11, "bold"), text_color=ACCENT_COLOR).pack(pady=(15, 5))
+        ctk.CTkLabel(self.header_top, text=f"Tanggal: {date_str}", font=("Segoe UI", 11, "bold"), text_color=ACCENT_COLOR).pack(side="left")
+
+        self.btn_user_tab = ctk.CTkButton(
+            self.header_top,
+            text="Tambah data Kasir →",
+            width=135,
+            height=28,
+            fg_color=ACCENT_COLOR,
+            hover_color="#375a7f",
+            text_color="white",
+            corner_radius=6,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: self.controller.show_tab("USR")
+        )
+        self.btn_user_tab.pack(side="right")
         
         self.cashier_var = ctk.StringVar(value="Pilih data Kasir")
         self.cashier_menu = ctk.CTkOptionMenu(
@@ -73,7 +91,7 @@ class CalculateTab(ctk.CTkFrame):
             height=38,
             font=("Segoe UI", 11)
         )
-        self.cashier_menu.pack(pady=(0, 15), padx=25, fill="x")
+        self.cashier_menu.pack(pady=(0, 15), padx=20, fill="x")
 
         # Scrollable Area for Denominations
         self.scroll_container = ctk.CTkScrollableFrame(self.input_view, fg_color="transparent")
@@ -89,7 +107,7 @@ class CalculateTab(ctk.CTkFrame):
         self.total_frame = ctk.CTkFrame(self.footer_frame, fg_color=STATUS_PAID_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         self.total_frame.pack(fill="x", pady=(0, 10))
         
-        ctk.CTkLabel(self.total_frame, text="Grand Total:", font=("Segoe UI", 14, "bold"), text_color="black").pack(side="left", padx=15, pady=10)
+        ctk.CTkLabel(self.total_frame, text="Total Keseluruhan:", font=("Segoe UI", 14, "bold"), text_color="black").pack(side="left", padx=15, pady=10)
         self.lbl_grand_total = ctk.CTkLabel(self.total_frame, text="Rp 0", font=("Segoe UI", 16, "bold"), text_color="black")
         self.lbl_grand_total.pack(side="right", padx=15, pady=10)
         
@@ -97,22 +115,22 @@ class CalculateTab(ctk.CTkFrame):
         
         self.sys_row = ctk.CTkFrame(self.comp_frame, fg_color="transparent")
         self.sys_row.pack(fill="x")
-        ctk.CTkLabel(self.sys_row, text="Total System (Cash):", font=("Segoe UI", 11), text_color="grey").pack(side="left", padx=5)
-        self.lbl_sys_total = ctk.CTkLabel(self.sys_row, text="No Active Session", font=("Segoe UI", 11, "bold"), text_color=TEXT_COLOR)
+        ctk.CTkLabel(self.sys_row, text="Total Sistem (Tunai):", font=("Segoe UI", 11), text_color="grey").pack(side="left", padx=5)
+        self.lbl_sys_total = ctk.CTkLabel(self.sys_row, text="Tidak Ada Sesi Aktif", font=("Segoe UI", 11, "bold"), text_color=TEXT_COLOR)
         self.lbl_sys_total.pack(side="right", padx=5)
         
         self.diff_row = ctk.CTkFrame(self.comp_frame, fg_color="transparent")
         self.diff_row.pack(fill="x")
-        ctk.CTkLabel(self.diff_row, text="Difference:", font=("Segoe UI", 11), text_color="grey").pack(side="left", padx=5)
+        ctk.CTkLabel(self.diff_row, text="Selisih:", font=("Segoe UI", 11), text_color="grey").pack(side="left", padx=5)
         self.lbl_diff = ctk.CTkLabel(self.diff_row, text="Rp 0", font=("Segoe UI", 12, "bold"), text_color=TEXT_COLOR)
         self.lbl_diff.pack(side="right", padx=5)
         
         self.btn_box = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
         self.btn_box.pack(fill="x")
         
-        self.btn_preview = ctk.CTkButton(self.btn_box, text="Preview", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.show_preview)
+        self.btn_preview = ctk.CTkButton(self.btn_box, text="Pratinjau", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.show_preview)
         self.btn_preview.pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(self.btn_box, text="Clear All", fg_color="#666666", text_color="white", corner_radius=5, command=self.clear_all).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(self.btn_box, text="Reset Semua", fg_color="#666666", text_color="white", corner_radius=5, command=self.clear_all).pack(side="left", expand=True, padx=5)
 
         # --- MODE PREVIEW ---
         self.preview_view = ctk.CTkFrame(self.main_container, fg_color="transparent")
@@ -121,8 +139,8 @@ class CalculateTab(ctk.CTkFrame):
         self.preview_header = ctk.CTkFrame(self.preview_view, fg_color="transparent")
         self.preview_header.pack(fill="x", padx=20, pady=10)
         
-        ctk.CTkLabel(self.preview_header, text="Preview Struk", font=HEADER_FONT, text_color=TEXT_COLOR).pack(side="left")
-        ctk.CTkButton(self.preview_header, text="Back", width=60, fg_color="#666666", text_color="white", command=self.show_input_view).pack(side="right")
+        ctk.CTkLabel(self.preview_header, text="Pratinjau Struk", font=HEADER_FONT, text_color=TEXT_COLOR).pack(side="left")
+        ctk.CTkButton(self.preview_header, text="Kembali", width=60, fg_color="#666666", text_color="white", command=self.show_input_view).pack(side="right")
 
         self.receipt_scroll = ctk.CTkScrollableFrame(self.preview_view, fg_color="#e0e0e0", corner_radius=0)
         self.receipt_scroll.pack(fill="both", expand=True, padx=20)
@@ -196,7 +214,7 @@ class CalculateTab(ctk.CTkFrame):
 
     def show_preview(self):
         cashier_name = self.cashier_var.get()
-        if cashier_name in ["Pilih data Kasir", "Data Kasir Kosong"]:
+        if cashier_name in ["Pilih data Kasir", "Data Kasir Kosong"] or "Kosong" in cashier_name:
             messagebox.showwarning("Data Tidak Lengkap", "Silakan pilih data kasir terlebih dahulu.")
             return
 
@@ -418,7 +436,7 @@ class CalculateTab(ctk.CTkFrame):
         self.show_input_view()
 
     def clear_all(self):
-        if messagebox.askyesno("Clear All", "Reset semua input ke nol?"):
+        if messagebox.askyesno("Reset Semua", "Reset semua input ke nol?"):
             self.clear_all_silent()
 
     def clear_all_silent(self):
@@ -434,10 +452,13 @@ class CalculateTab(ctk.CTkFrame):
                 with open(USERS_FILE, "r") as f:
                     users = json.load(f)
                     names = [u["name"] for u in users]
-                    if names: self.cashier_menu.configure(values=names)
+                    if names:
+                        self.cashier_menu.configure(values=names)
+                        if self.cashier_var.get() in ["Data Kasir Kosong", "Data Kasir Kosong (Buka Tab Kasir)", "Data Kasir Kosong (Buka User Tab)", ""]:
+                            self.cashier_var.set("Pilih data Kasir")
                     else:
-                        self.cashier_menu.configure(values=["Data Kasir Kosong"])
-                        self.cashier_var.set("Data Kasir Kosong")
+                        self.cashier_menu.configure(values=["Data Kasir Kosong (Buka Tab Kasir)"])
+                        self.cashier_var.set("Data Kasir Kosong (Buka Tab Kasir)")
             except: pass
 
     def on_activate(self):

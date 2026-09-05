@@ -20,6 +20,7 @@ STATUS_CHANGE_BG = "#ffa500" # Orange
 DATA_DIR = "data"
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 CALC_HISTORY_FILE = os.path.join(DATA_DIR, "calculate_history.json")
+MODAL_FILE = os.path.join(DATA_DIR, "modal_data.json")
 
 # Font Configuration
 MAIN_FONT = ("Segoe UI", 11)

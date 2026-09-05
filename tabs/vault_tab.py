@@ -14,9 +14,9 @@ class VaultTab(ctk.CTkFrame):
         self.setup_ui()
 
     def setup_ui(self):
-        ctk.CTkLabel(self, text="Vault Explorer", font=HEADER_FONT, text_color=TEXT_COLOR).pack(pady=10)
+        ctk.CTkLabel(self, text="Riwayat Sesi", font=HEADER_FONT, text_color=TEXT_COLOR).pack(pady=10)
         
-        self.search_entry = ctk.CTkEntry(self, placeholder_text="Search by date (DD_MM_YYYY)...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=0)
+        self.search_entry = ctk.CTkEntry(self, placeholder_text="Cari berdasarkan tanggal (DD_MM_YYYY)...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, text_color=TEXT_COLOR, corner_radius=0)
         self.search_entry.pack(fill="x", padx=20, pady=5)
         self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_vault_list())
 
@@ -27,13 +27,13 @@ class VaultTab(ctk.CTkFrame):
         self.btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.btn_frame.pack(fill="x", padx=20, pady=10)
 
-        self.btn_new = ctk.CTkButton(self.btn_frame, text="New Session", fg_color="#2e7d32", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.init_session)
+        self.btn_new = ctk.CTkButton(self.btn_frame, text="Sesi Baru", fg_color="#2e7d32", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.init_session)
         self.btn_new.pack(side="left", expand=True, padx=5)
 
-        self.btn_delete = ctk.CTkButton(self.btn_frame, text="Delete Selected", fg_color="#ff4444", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.delete_selected)
+        self.btn_delete = ctk.CTkButton(self.btn_frame, text="Hapus Terpilih", fg_color="#ff4444", text_color="white", corner_radius=0, font=MAIN_FONT, command=self.delete_selected)
         self.btn_delete.pack(side="left", expand=True, padx=5)
         
-        self.btn_open = ctk.CTkButton(self.btn_frame, text="Open Session", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, font=MAIN_FONT, command=self.open_selected)
+        self.btn_open = ctk.CTkButton(self.btn_frame, text="Buka Sesi", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, font=MAIN_FONT, command=self.open_selected)
         self.btn_open.pack(side="right", expand=True, padx=5)
 
     def refresh_vault_list(self):
@@ -63,7 +63,7 @@ class VaultTab(ctk.CTkFrame):
             cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=0, command=lambda p=f: self.toggle_selection(p))
             cb.pack(side="left", padx=10)
             
-            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Entries: {count}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
+            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Transaksi: {count}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
             info.pack(side="left", fill="both", expand=True)
 
     def toggle_selection(self, path):
@@ -72,7 +72,7 @@ class VaultTab(ctk.CTkFrame):
 
     def delete_selected(self):
         if not self.selected_files: return
-        if messagebox.askyesno("Confirmation", f"Permanently delete {len(self.selected_files)} session records?"):
+        if messagebox.askyesno("Konfirmasi", f"Hapus permanen {len(self.selected_files)} data sesi terpilih?"):
             for f in self.selected_files:
                 try: os.remove(f)
                 except: pass

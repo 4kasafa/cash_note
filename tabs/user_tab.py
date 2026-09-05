@@ -23,14 +23,43 @@ class UserTab(ctk.CTkFrame):
         self.list_view.pack(fill="both", expand=True)
         
         header_area = ctk.CTkFrame(self.list_view, fg_color="transparent")
-        header_area.pack(fill="x", padx=20, pady=10)
+        header_area.pack(fill="x", padx=20, pady=(10, 5))
         
-        ctk.CTkLabel(header_area, text="Cashier Management", font=HEADER_FONT, text_color=TEXT_COLOR).pack(side="left")
-        
-        self.btn_add = ctk.CTkButton(header_area, text="+ Add Cashier", width=120, fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, font=SMALL_FONT, command=self.show_add_form)
+        # Action & Navigation Buttons Row
+        actions_row = ctk.CTkFrame(header_area, fg_color="transparent")
+        actions_row.pack(fill="x", pady=(0, 8))
+
+        self.btn_to_calc = ctk.CTkButton(
+            actions_row, 
+            text="← Kembali", 
+            width=135, 
+            height=30, 
+            fg_color="#666666", 
+            hover_color="#555555", 
+            text_color="white", 
+            corner_radius=6, 
+            font=("Segoe UI", 10, "bold"), 
+            command=lambda: self.controller.show_tab("CAL")
+        )
+        self.btn_to_calc.pack(side="left")
+
+        self.btn_add = ctk.CTkButton(
+            actions_row, 
+            text="+ Tambah Kasir", 
+            width=110, 
+            height=30, 
+            fg_color=ACCENT_COLOR, 
+            hover_color="#375a7f", 
+            text_color="white", 
+            corner_radius=6, 
+            font=SMALL_FONT, 
+            command=self.show_add_form
+        )
         self.btn_add.pack(side="right")
         
-        self.search_entry = ctk.CTkEntry(self.list_view, placeholder_text="Search cashier name...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0)
+        ctk.CTkLabel(header_area, text="Kelola Data Kasir", font=HEADER_FONT, text_color=TEXT_COLOR).pack(anchor="w")
+        
+        self.search_entry = ctk.CTkEntry(self.list_view, placeholder_text="Cari nama kasir...", font=MAIN_FONT, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0)
         self.search_entry.pack(fill="x", padx=20, pady=5)
         self.search_entry.bind("<KeyRelease>", lambda e: self.refresh_user_list())
 
@@ -40,7 +69,7 @@ class UserTab(ctk.CTkFrame):
         # --- Form View (Hidden by default) ---
         self.form_view = ctk.CTkFrame(self.content_container, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
         
-        self.form_title = ctk.CTkLabel(self.form_view, text="Add New Cashier", font=HEADER_FONT, text_color=ACCENT_COLOR)
+        self.form_title = ctk.CTkLabel(self.form_view, text="Tambah Kasir Baru", font=HEADER_FONT, text_color=ACCENT_COLOR)
         self.form_title.pack(pady=20)
         
         self.create_field("Nama Kasir:", "entry_name")
@@ -51,8 +80,8 @@ class UserTab(ctk.CTkFrame):
         btn_box = ctk.CTkFrame(self.form_view, fg_color="transparent")
         btn_box.pack(fill="x", padx=40, pady=30)
         
-        ctk.CTkButton(btn_box, text="Save Data", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.save_user).pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(btn_box, text="Cancel", fg_color="#666666", text_color="white", corner_radius=5, command=self.show_list_view).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(btn_box, text="Simpan Data", fg_color=ACCENT_COLOR, text_color="white", corner_radius=5, command=self.save_user).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(btn_box, text="Batal", fg_color="#666666", text_color="white", corner_radius=5, command=self.show_list_view).pack(side="left", expand=True, padx=5)
 
     def create_field(self, label, attr_name):
         f = ctk.CTkFrame(self.form_view, fg_color="transparent")
@@ -64,7 +93,7 @@ class UserTab(ctk.CTkFrame):
 
     def show_add_form(self):
         self.editing_id = None
-        self.form_title.configure(text="Add New Cashier")
+        self.form_title.configure(text="Tambah Kasir Baru")
         self.entry_name.delete(0, "end")
         self.entry_id.delete(0, "end")
         self.entry_id.configure(state="normal")
@@ -75,7 +104,7 @@ class UserTab(ctk.CTkFrame):
 
     def show_edit_form(self, user):
         self.editing_id = user["id"]
-        self.form_title.configure(text="Edit Cashier")
+        self.form_title.configure(text="Edit Data Kasir")
         self.entry_name.delete(0, "end")
         self.entry_name.insert(0, user["name"])
         self.entry_id.delete(0, "end")
@@ -113,7 +142,7 @@ class UserTab(ctk.CTkFrame):
         shift = self.entry_shift.get().strip()
         
         if not (name and uid and branch and shift):
-            messagebox.showwarning("Input Error", "All fields are required.")
+            messagebox.showwarning("Peringatan", "Semua kolom wajib diisi.")
             return
 
         if self.editing_id:
@@ -126,7 +155,7 @@ class UserTab(ctk.CTkFrame):
         else:
             # Check for duplicate ID
             if any(u["id"] == uid for u in self.users):
-                messagebox.showerror("Duplicate ID", f"ID Kasir '{uid}' already exists.")
+                messagebox.showerror("ID Duplikat", f"ID Kasir '{uid}' sudah terdaftar.")
                 return
             self.users.append({"name": name, "id": uid, "branch": branch, "shift": shift})
             
@@ -134,7 +163,7 @@ class UserTab(ctk.CTkFrame):
         self.show_list_view()
 
     def delete_user(self, uid):
-        if messagebox.askyesno("Confirmation", "Delete this cashier?"):
+        if messagebox.askyesno("Konfirmasi", "Hapus data kasir ini?"):
             self.users = [u for u in self.users if u["id"] != uid]
             self.save_users_to_file()
             self.refresh_user_list()
@@ -159,13 +188,14 @@ class UserTab(ctk.CTkFrame):
             info_frame.pack(side="left", fill="both", expand=True, pady=5)
             
             ctk.CTkLabel(info_frame, text=user["name"], font=("Segoe UI", 12, "bold"), text_color=TEXT_COLOR, anchor="w").pack(fill="x")
-            ctk.CTkLabel(info_frame, text=f"ID: {user['id']} | Branch: {user['branch']} | Shift: {user['shift']}", font=("Segoe UI", 9), text_color="grey", anchor="w").pack(fill="x")
+            ctk.CTkLabel(info_frame, text=f"ID: {user['id']} | Cabang: {user['branch']} | Shift: {user['shift']}", font=("Segoe UI", 9), text_color="grey", anchor="w").pack(fill="x")
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=10)
             
             ctk.CTkButton(btns, text="Edit", width=50, height=25, corner_radius=5, font=SMALL_FONT, fg_color="#f5f5f5", text_color="black", command=lambda u=user: self.show_edit_form(u)).pack(side="left", padx=2)
-            ctk.CTkButton(btns, text="Delete", width=50, height=25, corner_radius=5, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda u=user: self.delete_user(u["id"])).pack(side="left", padx=2)
+            ctk.CTkButton(btns, text="Hapus", width=50, height=25, corner_radius=5, font=SMALL_FONT, fg_color="#ffebee", text_color="#d32f2f", hover_color="#ffcdd2", command=lambda u=user: self.delete_user(u["id"])).pack(side="left", padx=2)
 
     def on_activate(self):
+        self.load_users()
         self.show_list_view()
