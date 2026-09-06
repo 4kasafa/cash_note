@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from tkinter import messagebox
 from constants import (
-    SIDEBAR_COLOR, BORDER_COLOR, TEXT_COLOR, 
+    SIDEBAR_COLOR, BORDER_COLOR, TEXT_COLOR, STATUS_PAID_BG,
     HEADER_FONT, MAIN_FONT, SMALL_FONT, CONSOLE_COLOR, ACCENT_COLOR, 
     MODAL_FILE
 )
@@ -94,7 +94,29 @@ class ModalTab(ctk.CTkFrame):
             self, fg_color=CONSOLE_COLOR, border_width=1, 
             border_color=BORDER_COLOR, corner_radius=8
         )
-        self.scroll_list.pack(fill="both", expand=True, padx=15, pady=(5, 15))
+        self.scroll_list.pack(fill="both", expand=True, padx=15, pady=5)
+
+        # 4. Footer Area (Total Modal Display)
+        self.footer = ctk.CTkFrame(self, fg_color="transparent")
+        self.footer.pack(fill="x", side="bottom", padx=15, pady=(5, 10))
+
+        self.total_display_frame = ctk.CTkFrame(
+            self.footer, fg_color=STATUS_PAID_BG, border_width=1, 
+            border_color=BORDER_COLOR, corner_radius=8
+        )
+        self.total_display_frame.pack(fill="x")
+
+        self.lbl_total_label = ctk.CTkLabel(
+            self.total_display_frame, text="Total Modal :", 
+            font=("Segoe UI", 14, "bold"), text_color="black"
+        )
+        self.lbl_total_label.pack(side="left", padx=15, pady=12)
+
+        self.lbl_total = ctk.CTkLabel(
+            self.total_display_frame, text="Rp 0", 
+            font=("Segoe UI", 16, "bold"), text_color="black"
+        )
+        self.lbl_total.pack(side="right", padx=15, pady=12)
 
     def on_activate(self):
         self.entry_amount.focus_set()
@@ -283,3 +305,7 @@ class ModalTab(ctk.CTkFrame):
         # Update Header count
         total_items = len(self.modal_items)
         self.lbl_item_count.configure(text=f"{total_items} Item")
+
+        # Update Footer Total (hanya jumlah modal yang tidak dicentang)
+        total_modal = sum(item.get("amount", 0) for item in self.modal_items if not item.get("checked", False))
+        self.lbl_total.configure(text=f"Rp {total_modal:,}".replace(",", "."))
