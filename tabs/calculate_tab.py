@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import tempfile
+import textwrap
 from datetime import datetime
 from tkinter import messagebox
 from constants import (HEADER_FONT, TEXT_COLOR, MAIN_FONT, CONSOLE_COLOR, 
@@ -30,6 +31,8 @@ class CalculateTab(ctk.CTkFrame):
         ]
         self.inputs = {} 
         self.subtotal_labels = {}
+        self.expense_amount = 0
+        self.expense_note = ""
         
         self.vcmd = (self.register(self.validate_numeric), "%P")
         
@@ -91,7 +94,12 @@ class CalculateTab(ctk.CTkFrame):
             height=38,
             font=("Segoe UI", 11)
         )
-        self.cashier_menu.pack(pady=(0, 15), padx=20, fill="x")
+        self.cashier_menu.pack(pady=(0, 8), padx=20, fill="x")
+
+        # Expense & Note Menu / Section
+        self.expense_container = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        self.expense_container.pack(fill="x", padx=20, pady=(0, 12))
+        self.render_expense_section()
 
         # Scrollable Area for Denominations
         self.scroll_container = ctk.CTkScrollableFrame(self.input_view, fg_color="transparent")
@@ -163,6 +171,237 @@ class CalculateTab(ctk.CTkFrame):
 
         self.btn_confirm = ctk.CTkButton(self.preview_footer, text="Simpan & Cetak", fg_color="#2e7d32", text_color="white", height=45, corner_radius=5, font=("Segoe UI", 12, "bold"), command=self.save_and_print)
         self.btn_confirm.pack(fill="x", padx=40, pady=10)
+
+    def render_expense_section(self):
+        for widget in self.expense_container.winfo_children():
+            widget.destroy()
+
+        if self.expense_amount == 0 and not self.expense_note:
+            btn = ctk.CTkButton(
+                self.expense_container,
+                text="+ Pengeluaran & Keterangan",
+                fg_color="#eef2fb",
+                hover_color="#dde6f9",
+                text_color=ACCENT_COLOR,
+                border_width=1,
+                border_color="#c7d7fa",
+                corner_radius=8,
+                height=32,
+                font=("Segoe UI", 11, "bold"),
+                command=self.show_expense_popup
+            )
+            btn.pack(fill="x")
+        else:
+            card = ctk.CTkFrame(
+                self.expense_container,
+                fg_color="#fff9f9" if self.expense_amount > 0 else "#f8faff",
+                border_width=1,
+                border_color="#ffcdd2" if self.expense_amount > 0 else "#dbe4fb",
+                corner_radius=8
+            )
+            card.pack(fill="x")
+
+            info_box = ctk.CTkFrame(card, fg_color="transparent")
+            info_box.pack(side="left", fill="both", expand=True, padx=(12, 5), pady=6)
+
+            amt_str = f"Rp {self.expense_amount:,}".replace(",", ".")
+            lbl_amt = ctk.CTkLabel(
+                info_box,
+                text=f"Pengeluaran: {amt_str}",
+                font=("Segoe UI", 11, "bold"),
+                text_color="#d32f2f" if self.expense_amount > 0 else TEXT_COLOR,
+                anchor="w"
+            )
+            lbl_amt.pack(fill="x")
+
+            if self.expense_note:
+                lbl_note = ctk.CTkLabel(
+                    info_box,
+                    text=f"Ket: {self.expense_note}",
+                    font=SMALL_FONT,
+                    text_color="#555555",
+                    anchor="w"
+                )
+                lbl_note.pack(fill="x")
+
+            btn_box = ctk.CTkFrame(card, fg_color="transparent")
+            btn_box.pack(side="right", padx=(5, 8), pady=6)
+
+            btn_edit = ctk.CTkButton(
+                btn_box,
+                text="Ubah",
+                width=45,
+                height=26,
+                fg_color=ACCENT_COLOR,
+                hover_color="#375a7f",
+                text_color="white",
+                corner_radius=5,
+                font=("Segoe UI", 10, "bold"),
+                command=self.show_expense_popup
+            )
+            btn_edit.pack(side="left", padx=2)
+
+            btn_del = ctk.CTkButton(
+                btn_box,
+                text="✕",
+                width=26,
+                height=26,
+                fg_color="#e0e0e0",
+                hover_color="#d0d0d0",
+                text_color="#333333",
+                corner_radius=5,
+                font=("Segoe UI", 10, "bold"),
+                command=self.clear_expense
+            )
+            btn_del.pack(side="left", padx=2)
+
+    def show_expense_popup(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Pengeluaran & Keterangan")
+        dialog.geometry("380x300")
+        dialog.resizable(False, False)
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+        dialog.update_idletasks()
+
+        x = self.winfo_rootx() + (self.winfo_width() - 380) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - 300) // 2
+        dialog.geometry(f"+{max(0, x)}+{max(0, y)}")
+
+        container = ctk.CTkFrame(dialog, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=20, pady=15)
+
+        ctk.CTkLabel(
+            container,
+            text="Input Pengeluaran & Keterangan",
+            font=HEADER_FONT,
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", pady=(0, 10))
+
+        ctk.CTkLabel(
+            container,
+            text="Nominal Pengeluaran (Rp):",
+            font=("Segoe UI", 11, "bold"),
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", pady=(5, 2))
+
+        entry_amount = ctk.CTkEntry(
+            container,
+            placeholder_text="0",
+            height=38,
+            font=("Segoe UI", 14, "bold"),
+            justify="right",
+            fg_color=CONSOLE_COLOR,
+            border_color=BORDER_COLOR,
+            text_color=TEXT_COLOR,
+            corner_radius=6
+        )
+        entry_amount.pack(fill="x", pady=(0, 10))
+        if self.expense_amount > 0:
+            entry_amount.insert(0, f"{self.expense_amount:,}".replace(",", "."))
+
+        def format_currency_input(event=None):
+            val = entry_amount.get().replace(".", "").strip()
+            val = "".join(filter(str.isdigit, val))
+            if not val:
+                entry_amount.delete(0, "end")
+                return
+            formatted = "{:,}".format(int(val)).replace(",", ".")
+            entry_amount.delete(0, "end")
+            entry_amount.insert(0, formatted)
+
+        entry_amount.bind("<KeyRelease>", format_currency_input)
+
+        ctk.CTkLabel(
+            container,
+            text="Keterangan:",
+            font=("Segoe UI", 11, "bold"),
+            text_color=TEXT_COLOR
+        ).pack(anchor="w", pady=(5, 2))
+
+        entry_note = ctk.CTkEntry(
+            container,
+            placeholder_text="Contoh: Potongan refund kelebihan transfer",
+            height=38,
+            font=MAIN_FONT,
+            fg_color=CONSOLE_COLOR,
+            border_color=BORDER_COLOR,
+            text_color=TEXT_COLOR,
+            corner_radius=6
+        )
+        entry_note.pack(fill="x", pady=(0, 15))
+        if self.expense_note:
+            entry_note.insert(0, self.expense_note)
+
+        def on_save(event=None):
+            val_str = entry_amount.get().replace(".", "").strip()
+            self.expense_amount = int(val_str) if val_str else 0
+            self.expense_note = entry_note.get().strip()
+            self.render_expense_section()
+            dialog.destroy()
+
+        def on_clear():
+            self.expense_amount = 0
+            self.expense_note = ""
+            self.render_expense_section()
+            dialog.destroy()
+
+        def on_cancel(event=None):
+            dialog.destroy()
+
+        entry_amount.bind("<Return>", lambda e: entry_note.focus())
+        entry_note.bind("<Return>", on_save)
+        dialog.bind("<Escape>", on_cancel)
+
+        btn_box = ctk.CTkFrame(container, fg_color="transparent")
+        btn_box.pack(fill="x", pady=(5, 0))
+
+        btn_save = ctk.CTkButton(
+            btn_box,
+            text="Simpan",
+            fg_color=ACCENT_COLOR,
+            hover_color="#375a7f",
+            text_color="white",
+            corner_radius=6,
+            font=("Segoe UI", 11, "bold"),
+            height=34,
+            command=on_save
+        )
+        btn_save.pack(side="left", expand=True, fill="x", padx=(0, 4))
+
+        if self.expense_amount > 0 or self.expense_note:
+            btn_clear = ctk.CTkButton(
+                btn_box,
+                text="Hapus",
+                fg_color="#d32f2f",
+                hover_color="#b71c1c",
+                text_color="white",
+                corner_radius=6,
+                font=MAIN_FONT,
+                height=34,
+                command=on_clear
+            )
+            btn_clear.pack(side="left", expand=True, fill="x", padx=4)
+
+        btn_cancel = ctk.CTkButton(
+            btn_box,
+            text="Batal",
+            fg_color="#666666",
+            hover_color="#555555",
+            text_color="white",
+            corner_radius=6,
+            font=MAIN_FONT,
+            height=34,
+            command=on_cancel
+        )
+        btn_cancel.pack(side="left", expand=True, fill="x", padx=(4, 0))
+
+        entry_amount.focus()
+
+    def clear_expense(self, silent=False):
+        self.expense_amount = 0
+        self.expense_note = ""
+        self.render_expense_section()
 
     def create_denom_row(self, denom):
         row = ctk.CTkFrame(self.scroll_container, fg_color=SIDEBAR_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=8)
@@ -260,7 +499,7 @@ class CalculateTab(ctk.CTkFrame):
         return 32 if size == "58" else 48
 
     def format_key_value_line(self, label, value, width):
-        left = f"{label}:"
+        left = str(label)
         right = str(value)
         space = width - len(left) - len(right)
         if space < 1:
@@ -270,7 +509,13 @@ class CalculateTab(ctk.CTkFrame):
     def format_amount_line(self, label, amount, width):
         right = f"Rp {amount:,}".replace(",", ".")
         space = width - len(label) - len(right)
-        if space < 1:
+        if space < 2:
+            words = label.split(" ", 1)
+            if len(words) == 2:
+                first, rest = words
+                space1 = width - len(first) - len(right)
+                if space1 >= 1:
+                    return f"{first}{' ' * space1}{right}\n{rest}"
             return f"{label} {right}"
         return f"{label}{' ' * space}{right}"
 
@@ -340,6 +585,7 @@ class CalculateTab(ctk.CTkFrame):
         lines.append(self.format_key_value_line("Shift", u["shift"], inner_width))
         lines.append(self.format_key_value_line("Kasir", u["name"], inner_width))
         lines.append(self.format_key_value_line("User ID", u["id"], inner_width))
+        lines.append("-" * inner_width)
         
         for denom in self.denominations:
             qty = int(self.inputs[denom].get() or 0)
@@ -357,20 +603,31 @@ class CalculateTab(ctk.CTkFrame):
                 else:
                     physical_lines.append(f"{left_part}{' ' * space}{right_part}")
         
-        sales_total = physical_total + non_cash_total
-        lines.append("_" * inner_width)
-        lines.append(self.format_amount_line("Total Penjualan", sales_total, inner_width))
+        sales_total = physical_total + non_cash_total + self.expense_amount
+        for sub_line in self.format_amount_line("Total Penjualan", sales_total, inner_width).split("\n"):
+            lines.append(sub_line)
         lines.append(self.format_amount_line("Non Tunai", non_cash_total, inner_width))
-        lines.append(self.format_amount_line("Pengeluaran", 0, inner_width))
-        lines.append("_" * inner_width)
-        lines.append("Rincian Uang Fisik:".center(inner_width))
-        lines.extend(physical_lines)
-        lines.append("_" * inner_width)
-        lines.append(self.format_amount_line("Total Uang Fisik", physical_total, inner_width))
-        lines.append("_" * inner_width)
+        lines.append(self.format_amount_line("Pengeluaran", self.expense_amount, inner_width))
         lines.append("-" * inner_width)
-        lines.append('"شكراً جزيلاً"'.center(inner_width))
-        lines.append(now.strftime('%H:%M:%S').center(inner_width))
+        lines.append("-- Rincian Uang Fisik --".center(inner_width))
+        lines.extend(physical_lines)
+        lines.append("-" * inner_width)
+        lines.append(self.format_amount_line("TOTAL FISIK", physical_total, inner_width))
+        lines.append("-" * inner_width)
+
+        if self.expense_note.strip():
+            raw_lines = self.expense_note.strip().splitlines()
+            first = True
+            for raw in raw_lines:
+                prefix = "Ket: " if first else ""
+                first = False
+                text_to_wrap = f"{prefix}{raw}".strip()
+                wrapped = textwrap.wrap(text_to_wrap, width=inner_width)
+                for w in wrapped:
+                    lines.append(w.center(inner_width))
+
+        lines.append(now.strftime('%d/%m/%Y %H:%M:%S').center(inner_width))
+        lines.append(ARABIC_RECEIPT_TEXT.center(inner_width))
 
         lines, _ = self.add_receipt_margin(lines, width, margin)
         
@@ -383,7 +640,9 @@ class CalculateTab(ctk.CTkFrame):
             "date": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
             "cashier": self.active_cashier_data["name"],
             "denominations": {str(d): int(self.inputs[d].get() or 0) for d in self.denominations},
-            "grand_total": total_val
+            "grand_total": total_val,
+            "expense": self.expense_amount,
+            "note": self.expense_note
         }
         
         history = []
@@ -440,6 +699,7 @@ class CalculateTab(ctk.CTkFrame):
             self.clear_all_silent()
 
     def clear_all_silent(self):
+        self.clear_expense(silent=True)
         for denom in self.denominations:
             self.inputs[denom].delete(0, "end")
             self.subtotal_labels[denom].configure(text="Rp 0")
