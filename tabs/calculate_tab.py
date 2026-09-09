@@ -65,8 +65,8 @@ class CalculateTab(ctk.CTkFrame):
 
         self.btn_user_tab = ctk.CTkButton(
             self.header_top,
-            text="Tambah data Kasir →",
-            width=135,
+            text="User →",
+            width=100,
             height=28,
             fg_color=ACCENT_COLOR,
             hover_color="#375a7f",
@@ -76,6 +76,20 @@ class CalculateTab(ctk.CTkFrame):
             command=lambda: self.controller.show_tab("USR")
         )
         self.btn_user_tab.pack(side="right")
+
+        self.btn_kasir_tab = ctk.CTkButton(
+            self.header_top,
+            text="Laku →",
+            width=100,
+            height=28,
+            fg_color="#4b5563",
+            hover_color="#374151",
+            text_color="white",
+            corner_radius=6,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: self.controller.show_tab("KSR")
+        )
+        self.btn_kasir_tab.pack(side="right", padx=(0, 6))
         
         self.cashier_var = ctk.StringVar(value="Pilih data Kasir")
         self.cashier_menu = ctk.CTkOptionMenu(

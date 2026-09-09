@@ -8,6 +8,7 @@ from tabs.session_tab import SessionTab
 from tabs.user_tab import UserTab
 from tabs.calculate_tab import CalculateTab
 from tabs.modal_tab import ModalTab
+from tabs.kasir_tab import KasirTab
 
 class CashNoteApp(ctk.CTk):
     def __init__(self):
@@ -48,11 +49,13 @@ class CashNoteApp(ctk.CTk):
         self.bind_all("<Alt-u>", lambda e: self.show_tab("USR"))
         self.bind_all("<Alt-c>", lambda e: self.show_tab("CAL"))
         self.bind_all("<Alt-m>", lambda e: self.show_tab("MOD"))
+        self.bind_all("<Alt-k>", lambda e: self.show_tab("KSR"))
         self.bind_all("<Alt-V>", lambda e: self.show_tab("VLT"))
         self.bind_all("<Alt-A>", lambda e: self.show_tab("ACT"))
         self.bind_all("<Alt-U>", lambda e: self.show_tab("USR"))
         self.bind_all("<Alt-C>", lambda e: self.show_tab("CAL"))
         self.bind_all("<Alt-M>", lambda e: self.show_tab("MOD"))
+        self.bind_all("<Alt-K>", lambda e: self.show_tab("KSR"))
         self.bind_all("<Escape>", self.handle_escape)
         self.main_container.bind("<Configure>", self.update_content_width)
         self.after(0, self.update_content_width)
@@ -70,6 +73,7 @@ class CashNoteApp(ctk.CTk):
         self.tabs["USR"] = UserTab(self.content_shell, self)
         self.tabs["CAL"] = CalculateTab(self.content_shell, self)
         self.tabs["MOD"] = ModalTab(self.content_shell, self)
+        self.tabs["KSR"] = KasirTab(self.content_shell, self)
 
     def show_tab(self, tab_id):
         if tab_id == "ACT" and not self.current_file:
@@ -94,6 +98,8 @@ class CashNoteApp(ctk.CTk):
             self.tabs["USR"].on_activate()
         elif tab_id == "MOD":
             self.tabs["MOD"].on_activate()
+        elif tab_id == "KSR":
+            self.tabs["KSR"].on_activate()
 
     def handle_escape(self, event=None):
         if self.active_tab == "USR":
@@ -106,6 +112,8 @@ class CashNoteApp(ctk.CTk):
             cal_tab = self.tabs.get("CAL")
             if cal_tab and cal_tab.preview_view.winfo_ismapped():
                 cal_tab.show_input_view()
+        elif self.active_tab == "KSR":
+            self.show_tab("CAL")
 
     def update_content_width(self, event=None):
         width = min(self.main_container.winfo_width(), self.max_content_width)

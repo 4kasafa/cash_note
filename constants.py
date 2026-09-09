@@ -17,6 +17,13 @@ BORDER_COLOR = "#d1d3e2"
 STATUS_TOTAL_BG = "#ffff00" # Yellow
 STATUS_PAID_BG = "#90ee90"  # Light Green
 STATUS_CHANGE_BG = "#ffa500" # Orange
+COLOR_KURANG = "#ef4444"    # Red
+COLOR_LEBIH = "#10b981"     # Green
+COLOR_PAS = "#6b7280"       # Gray
+
+# Google Apps Script Endpoint
+GAS_URL_KASIR = "https://script.google.com/macros/s/AKfycbw95Qnt8U-GQWt04AeG3sBpBfcBleNLfPMSr0arOXtGDH2iZiMDVoWHyBmNpW8Shejo/exec"
+
 DATA_DIR = "data"
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 CALC_HISTORY_FILE = os.path.join(DATA_DIR, "calculate_history.json")
