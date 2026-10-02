@@ -29,6 +29,12 @@ USERS_FILE = os.path.join(DATA_DIR, "users.json")
 CALC_HISTORY_FILE = os.path.join(DATA_DIR, "calculate_history.json")
 MODAL_FILE = os.path.join(DATA_DIR, "modal_data.json")
 
+LAKU_FILE_PREFIX = "laku_"
+
+def laku_file_for(user_id, month):
+    safe = "".join(c.lower() if c.isalnum() or c in ("-", "_") else "_" for c in str(user_id or "anon")).strip("_") or "anon"
+    return os.path.join(DATA_DIR, f"{LAKU_FILE_PREFIX}{month}_{safe}.json")
+
 # Font Configuration
 MAIN_FONT = ("Segoe UI", 11)
 HEADER_FONT = ("Segoe UI", 16, "bold")

@@ -54,8 +54,9 @@ class VaultTab(ctk.CTkFrame):
                 with open(f, "r") as jf:
                     data = json.load(jf)
                     total = sum(t["amount"] for t in data)
-                    count = len(data)
-            except: total, count = 0, 0
+                    count = sum(1 for t in data if t.get("category") != "Uninput")
+                    count_un = sum(1 for t in data if t.get("category") == "Uninput")
+            except: total, count, count_un = 0, 0, 0
 
             item = ctk.CTkFrame(self.scroll_vault, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=0)
             item.pack(fill="x", pady=2, padx=2)
@@ -63,7 +64,7 @@ class VaultTab(ctk.CTkFrame):
             cb = ctk.CTkCheckBox(item, text="", width=20, checkbox_width=16, checkbox_height=16, corner_radius=0, command=lambda p=f: self.toggle_selection(p))
             cb.pack(side="left", padx=10)
             
-            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Transaksi: {count}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
+            info = ctk.CTkButton(item, text=f"{fname} | Rp {total:,} | Transaksi: {count} | Belum Input: {count_un}".replace(",", "."), font=MAIN_FONT, fg_color="transparent", text_color=TEXT_COLOR, hover_color="#f5f5f5", anchor="w", corner_radius=0, command=lambda p=f: self.mount_file(p))
             info.pack(side="left", fill="both", expand=True)
 
     def toggle_selection(self, path):

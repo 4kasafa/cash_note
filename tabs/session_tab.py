@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import os
 import json
+import tkinter.font as tkfont
 from datetime import datetime
 from tkinter import messagebox
 from constants import SIDEBAR_COLOR, BORDER_COLOR, TEXT_COLOR, STATUS_TOTAL_BG, DISPLAY_FONT, ACCENT_COLOR, MAIN_FONT, SMALL_FONT, CONSOLE_COLOR, STATUS_PAID_BG, HEADER_FONT
@@ -62,9 +63,10 @@ class SessionTab(ctk.CTkFrame):
         self.filter_frame.pack(fill="x", padx=20, pady=(5, 0))
         
         self.btn_filter_all = self.create_filter_btn("Semua", "All")
+        self.btn_filter_inputs = self.create_filter_btn("Inputs", "Inputs")
         self.btn_filter_cash = self.create_filter_btn("Tunai", "Cash")
         self.btn_filter_non = self.create_filter_btn("Non Tunai", "Non Cash")
-        self.btn_filter_unin = self.create_filter_btn("Belum Input", "Uninput")
+        self.btn_filter_unin = self.create_filter_btn("uninput", "Uninput")
 
         # List Area
         self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
@@ -116,14 +118,15 @@ class SessionTab(ctk.CTkFrame):
 
     def next_page(self):
         indexed_data = list(enumerate(self.transactions))
-        filtered_data = [t for i, t in indexed_data if self.current_filter == "All" or t["category"] == self.current_filter]
+        filtered_data = [t for i, t in indexed_data if self.current_filter == "All" or (self.current_filter == "Inputs" and t.get("category") in ("Cash", "Non Cash")) or t.get("category") == self.current_filter]
         max_pages = (len(filtered_data) - 1) // self.page_size
         if self.current_page < max_pages:
             self.current_page += 1
             self.refresh_list()
 
     def create_filter_btn(self, text, cat):
-        btn = ctk.CTkButton(self.filter_frame, text=text, width=80, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=0, command=lambda: self.set_filter(cat))
+        w = tkfont.Font(family="Segoe UI", size=10).measure(text) + 24
+        btn = ctk.CTkButton(self.filter_frame, text=text, width=w, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=0, command=lambda: self.set_filter(cat))
         btn.pack(side="left", padx=2)
         self.action_buttons.append(btn)
         return btn
@@ -151,7 +154,7 @@ class SessionTab(ctk.CTkFrame):
         self.update_filter_visuals()
 
     def update_filter_visuals(self):
-        btns = {"All": self.btn_filter_all, "Cash": self.btn_filter_cash, "Non Cash": self.btn_filter_non, "Uninput": self.btn_filter_unin}
+        btns = {"All": self.btn_filter_all, "Inputs": self.btn_filter_inputs, "Cash": self.btn_filter_cash, "Non Cash": self.btn_filter_non, "Uninput": self.btn_filter_unin}
         for cat, btn in btns.items():
             is_active = cat == self.current_filter
             btn.configure(fg_color=ACCENT_COLOR if is_active else "#e5e5e5", text_color="white" if is_active else "black")
@@ -251,6 +254,46 @@ class SessionTab(ctk.CTkFrame):
         formatted = "{:,}".format(int(val)).replace(",", ".")
         self.entry_amount.delete(0, "end"); self.entry_amount.insert(0, formatted)
 
+    def _next_label(self):
+        labels = [t["label"] for t in self.transactions if t.get("category") in ("Cash", "Non Cash") and isinstance(t.get("label"), int)]
+        return max(labels) + 1 if labels else None
+
+    def _ask_first_label(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Label")
+        dialog.geometry("300x150")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - 300) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - 150) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        result = None
+        ctk.CTkLabel(dialog, text="Nomor label pertama :", font=MAIN_FONT, text_color=TEXT_COLOR).pack(pady=(15, 5))
+        entry = ctk.CTkEntry(dialog, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0, justify="center")
+        entry.pack(padx=20, fill="x")
+        entry.focus()
+
+        def on_save(event=None):
+            nonlocal result
+            val = entry.get().strip()
+            if not val.isdigit():
+                messagebox.showwarning("Peringatan", "Nomor label harus angka.")
+                return
+            result = int(val)
+            dialog.destroy()
+
+        entry.bind("<Return>", on_save)
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=10)
+        ctk.CTkButton(btn_frame, text="Batal", fg_color="#666666", text_color="white", corner_radius=0, command=dialog.destroy).pack(side="left", padx=5)
+        save_btn = ctk.CTkButton(btn_frame, text="Simpan", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=on_save)
+        save_btn.pack(side="right", padx=5)
+        dialog.wait_window()
+        return result
+
     def add_transaction(self, cat):
         if self.editing_index is not None:
             old_cat = self.transactions[self.editing_index]["category"]
@@ -261,9 +304,16 @@ class SessionTab(ctk.CTkFrame):
                 if items is None:
                     return
                 self.transactions[self.editing_index]["items"] = items
+                self.transactions[self.editing_index].pop("label", None)
 
             if old_cat == "Uninput" and cat != "Uninput":
                 self.transactions[self.editing_index].pop("items", None)
+                nxt = self._next_label()
+                if nxt is None:
+                    nxt = self._ask_first_label()
+                    if nxt is None:
+                        return
+                self.transactions[self.editing_index]["label"] = nxt
 
             if val_str:
                 self.transactions[self.editing_index]["amount"] = int(val_str)
@@ -287,6 +337,13 @@ class SessionTab(ctk.CTkFrame):
         }
         if cat == "Uninput":
             txn["items"] = items
+        else:
+            nxt = self._next_label()
+            if nxt is None:
+                nxt = self._ask_first_label()
+                if nxt is None:
+                    return
+            txn["label"] = nxt
         self.transactions.append(txn)
         self.save_session()
         self.entry_amount.delete(0, "end")
@@ -354,7 +411,7 @@ class SessionTab(ctk.CTkFrame):
         for w in self.scroll_log.winfo_children(): w.destroy()
         
         indexed_data = list(enumerate(self.transactions))
-        filtered_data = [(i, t) for i, t in indexed_data if self.current_filter == "All" or t["category"] == self.current_filter]
+        filtered_data = [(i, t) for i, t in indexed_data if self.current_filter == "All" or (self.current_filter == "Inputs" and t.get("category") in ("Cash", "Non Cash")) or t.get("category") == self.current_filter]
         
         total_items = len(filtered_data)
         total_pages = max(1, (total_items + self.page_size - 1) // self.page_size)
@@ -376,17 +433,11 @@ class SessionTab(ctk.CTkFrame):
             
             cat_color = {"Cash": "#2e7d32", "Non Cash": "#fbc02d", "Uninput": "#d32f2f"}.get(item["category"], TEXT_COLOR)
 
-            cat_map = {"Cash": "Tunai", "Non Cash": "Non Tunai", "Uninput": "Belum Diinput"}
-            cat_display = cat_map.get(item["category"], item["category"])
-            cat_label = cat_display
-            if item["category"] == "Uninput":
-                ic = len(item.get("items", []))
-                cat_label = f"Belum Diinput ({ic} item)"
-
-            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,} | {cat_label}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
+            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
             lbl_val.pack(fill="x")
 
-            lbl_ts = ctk.CTkLabel(info_frame, text=f"Waktu: {item['timestamp']}", font=("Segoe UI", 9), text_color="grey", anchor="w")
+            ts_text = f"{item['label']}|{item['timestamp']}" if isinstance(item.get("label"), int) else item['timestamp']
+            lbl_ts = ctk.CTkLabel(info_frame, text=ts_text, font=("Segoe UI", 9), text_color="grey", anchor="w")
             lbl_ts.pack(fill="x")
 
             if item["category"] == "Uninput":
@@ -407,4 +458,6 @@ class SessionTab(ctk.CTkFrame):
         
         total_sum = sum(t["amount"] for i, t in filtered_data)
         self.lbl_total.configure(text=f"{total_sum:,}.00".replace(",", "."))
-        self.lbl_count.configure(text=f"Transaksi: {len(self.transactions)}")
+        n_in = sum(1 for t in self.transactions if t.get("category") != "Uninput")
+        n_un = sum(1 for t in self.transactions if t.get("category") == "Uninput")
+        self.lbl_count.configure(text=f"Transaksi: {n_in} | uninput: {n_un}")
