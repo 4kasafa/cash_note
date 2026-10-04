@@ -2,9 +2,14 @@ import ctypes
 from ctypes import wintypes
 import threading
 import time
-from constants import SW_RESTORE, HWND_TOPMOST, HWND_NOTOPMOST, SWP_NOMOVE, SWP_NOSIZE, WM_HOTKEY
+from constants import (
+    SW_RESTORE, HWND_TOPMOST, HWND_NOTOPMOST, SWP_NOMOVE, SWP_NOSIZE,
+    WM_HOTKEY, RETURN_FOCUS_DELAY_MS, BUTBAYAR_CLICK_DELAY_MS,
+)
+from pos_reader import read_ketoko_value, click_butbayar, is_ketoko_window
 
 user32 = ctypes.windll.user32
+
 
 class WindowsAPIManager:
     def __init__(self, app):
@@ -38,8 +43,19 @@ class WindowsAPIManager:
                         if current_time - self.last_f12_time < 0.4:
                             self.app.after(0, self.focus_app)
                         self.last_f12_time = current_time
-                    
-                    else: # F10 or F11 (Single tap)
+
+                    elif hotkey_id == 2: # F10 (Ketoko auto-read + focus)
+                        current = user32.GetForegroundWindow()
+                        buf = ctypes.create_unicode_buffer(256)
+                        user32.GetWindowTextW(current, buf, 256)
+                        val = ""
+                        is_ketoko, _ = is_ketoko_window(current, buf.value)
+                        if is_ketoko:
+                            # ponytail: read in hotkey thread before Cash Note steals foreground
+                            val = read_ketoko_value(current)
+                        self.app.after(0, lambda v=val, k=is_ketoko: self.focus_app(prefill_value=v, from_ketoko=k))
+
+                    else: # F11 (Single tap - normal focus)
                         self.app.after(0, self.focus_app)
                         
                 user32.TranslateMessage(ctypes.byref(msg))
@@ -48,7 +64,7 @@ class WindowsAPIManager:
         thread = threading.Thread(target=listen, daemon=True)
         thread.start()
 
-    def focus_app(self):
+    def focus_app(self, prefill_value: str = "", from_ketoko: bool = False):
         current = user32.GetForegroundWindow()
         if self.my_hwnd and current != self.my_hwnd:
             self.previous_hwnd = current
@@ -56,12 +72,23 @@ class WindowsAPIManager:
             user32.SetWindowPos(self.my_hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
             user32.SetWindowPos(self.my_hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
             user32.SetForegroundWindow(self.my_hwnd)
-            if self.app.active_tab == "ACT":
-                self.app.tabs["ACT"].entry_amount.focus_force()
 
-    def return_focus(self):
-        if self.previous_hwnd:
+            if from_ketoko and self.app.current_file and self.app.active_tab != "ACT":
+                self.app.show_tab("ACT")
+
+            act_tab = self.app.tabs.get("ACT")
+            if self.app.active_tab == "ACT" and act_tab:
+                act_tab.apply_ketoko_prefill(prefill_value, from_ketoko)
+                act_tab.entry_amount.focus_force()
+
+    def return_focus(self, trigger_pay: bool = False):
+        target_hwnd = self.previous_hwnd
+        if target_hwnd:
             def task():
-                user32.SetForegroundWindow(self.previous_hwnd)
+                user32.SetForegroundWindow(target_hwnd)
                 self.previous_hwnd = None
-            self.app.after(200, task)
+                if trigger_pay:
+                    # ponytail: jeda kecil agar window target aktif sebelum klik UIA
+                    delay = BUTBAYAR_CLICK_DELAY_MS / 1000.0
+                    threading.Thread(target=lambda: (time.sleep(delay), click_butbayar(target_hwnd)), daemon=True).start()
+            self.app.after(RETURN_FOCUS_DELAY_MS, task)

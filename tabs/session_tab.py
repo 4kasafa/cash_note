@@ -20,6 +20,7 @@ class SessionTab(ctk.CTkFrame):
         self.action_buttons = []
         self.item_buttons = []
         self.uninput_detail_idx = None
+        self.auto_input_from_ketoko = False
         self.setup_ui()
 
     def setup_ui(self):
@@ -233,6 +234,14 @@ class SessionTab(ctk.CTkFrame):
         if self.file_path:
             self.lbl_session.configure(text=f"Sesi: {os.path.basename(self.file_path)}")
         self.update_filter_visuals()
+
+    def apply_ketoko_prefill(self, raw_value: str, from_ketoko: bool = False):
+        """Prefill nominal jika ada hasil baca dari Ketoko, set flag auto input."""
+        self.auto_input_from_ketoko = bool(from_ketoko)
+        if raw_value and raw_value.isdigit():
+            formatted = "{:,}".format(int(raw_value)).replace(",", ".")
+            self.entry_amount.delete(0, "end")
+            self.entry_amount.insert(0, formatted)
             
     def load_session(self):
         if os.path.exists(self.file_path):
@@ -344,12 +353,15 @@ class SessionTab(ctk.CTkFrame):
                 if nxt is None:
                     return
             txn["label"] = nxt
+        should_trigger_pay = self.auto_input_from_ketoko and cat in ("Cash", "Non Cash")
+        self.auto_input_from_ketoko = False
+
         self.transactions.append(txn)
         self.save_session()
         self.entry_amount.delete(0, "end")
         self.current_page = 0
         self.refresh_list()
-        self.controller.return_focus()
+        self.controller.return_focus(trigger_pay=should_trigger_pay)
         self.entry_amount.focus()
 
     def delete_transaction(self, idx):

@@ -122,5 +122,5 @@ class CashNoteApp(ctk.CTk):
             return
         self.content_shell.place_configure(width=width, height=height)
 
-    def return_focus(self):
-        self.windows_api.return_focus()
+    def return_focus(self, trigger_pay: bool = False):
+        self.windows_api.return_focus(trigger_pay=trigger_pay)

@@ -42,7 +42,10 @@ AGENTS.md
 data/
 img/
 TASK.md
+error.md
 
 graphify-out
 .sample
 .agnents
+dev/
+@AutomationLog.txt
