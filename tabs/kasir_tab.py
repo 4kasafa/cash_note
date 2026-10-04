@@ -653,7 +653,14 @@ class KasirTab(ctk.CTkFrame):
             ).pack(pady=25)
             return
 
-        for idx, item in enumerate(data):
+        # ponytail: terbaru paling atas; 28-31 bulan lalu = tanggal lebih tua = di bawah
+        ordered = sorted(
+            data,
+            key=lambda it: (self._parse_date(it.get("tanggal")) if isinstance(it, dict) else None) or datetime.min.date(),
+            reverse=True,
+        )
+
+        for idx, item in enumerate(ordered):
             row_card = ctk.CTkFrame(
                 self.scroll_tx, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=8
             )

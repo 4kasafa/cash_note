@@ -448,8 +448,8 @@ class SessionTab(ctk.CTkFrame):
             lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
             lbl_val.pack(fill="x")
 
-            ts_text = f"{item['label']}|{item['timestamp']}" if isinstance(item.get("label"), int) else item['timestamp']
-            lbl_ts = ctk.CTkLabel(info_frame, text=ts_text, font=("Segoe UI", 9), text_color="grey", anchor="w")
+            ts_text = f"{item['label']} | {item['timestamp']}" if isinstance(item.get("label"), int) else item['timestamp']
+            lbl_ts = ctk.CTkLabel(info_frame, text=ts_text, font=("Segoe UI", 9), text_color=TEXT_COLOR, anchor="w")
             lbl_ts.pack(fill="x")
 
             if item["category"] == "Uninput":
