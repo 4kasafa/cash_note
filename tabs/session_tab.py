@@ -6,6 +6,30 @@ from datetime import datetime
 from tkinter import messagebox
 from constants import SIDEBAR_COLOR, BORDER_COLOR, TEXT_COLOR, STATUS_TOTAL_BG, DISPLAY_FONT, ACCENT_COLOR, MAIN_FONT, SMALL_FONT, CONSOLE_COLOR, STATUS_PAID_BG, HEADER_FONT
 
+
+def match_filter(t, current_filter):
+    """True jika transaksi cocok dengan filter aktif (Split ikut Cash/NonCash/Inputs)."""
+    c = t.get("category")
+    if current_filter == "All":
+        return True
+    if current_filter == "Inputs":
+        return c in ("Cash", "Non Cash", "Split")
+    if current_filter == "Cash":
+        return c in ("Cash", "Split")
+    if current_filter == "Non Cash":
+        return c in ("Non Cash", "Split")
+    return c == current_filter
+
+
+def display_amount(t, current_filter):
+    """Nominal tampil: porsi cash/non-cash untuk Split pada filter Cash/Non Cash, total jika tidak."""
+    if t.get("category") == "Split":
+        if current_filter == "Cash":
+            return int(t.get("cash_part", 0))
+        if current_filter == "Non Cash":
+            return int(t.get("noncash_part", 0))
+    return int(t.get("amount", 0))
+
 class SessionTab(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent, fg_color="transparent", corner_radius=0)
@@ -20,6 +44,7 @@ class SessionTab(ctk.CTkFrame):
         self.action_buttons = []
         self.item_buttons = []
         self.uninput_detail_idx = None
+        self.split_detail_idx = None
         self.auto_input_from_ketoko = False
         self.setup_ui()
 
@@ -49,11 +74,12 @@ class SessionTab(ctk.CTkFrame):
         
         self.btn_grid = ctk.CTkFrame(self.input_area, fg_color="transparent")
         self.btn_grid.pack(fill="x")
-        self.btn_grid.grid_columnconfigure((0, 1, 2), weight=1, uniform="btns")
-        
-        self.btn_cash = self.create_input_btn(self.btn_grid, "Tunai", "#2e7d32", "#e8f5e9", "Cash", 0)
-        self.btn_non = self.create_input_btn(self.btn_grid, "Non Tunai", "#fbc02d", "#fffde7", "Non Cash", 1)
-        self.btn_unin = self.create_input_btn(self.btn_grid, "Belum Input", "#d32f2f", "#ffebee", "Uninput", 2)
+        self.btn_grid.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="btns")
+
+        self.btn_cash = self.create_input_btn(self.btn_grid, "Cash", "#2e7d32", "#e8f5e9", "Cash", 0)
+        self.btn_non = self.create_input_btn(self.btn_grid, "NonCash", "#fbc02d", "#fffde7", "Non Cash", 1)
+        self.btn_split = self.create_input_btn(self.btn_grid, "Split", "#4e73df", "#eef2fb", "Split", 2)
+        self.btn_unin = self.create_input_btn(self.btn_grid, "UnInput", "#d32f2f", "#ffebee", "Uninput", 3)
 
         # Edit Controls
         self.edit_frame = ctk.CTkFrame(self.input_area, fg_color="transparent")
@@ -62,12 +88,14 @@ class SessionTab(ctk.CTkFrame):
         # Filter Section
         self.filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.filter_frame.pack(fill="x", padx=20, pady=(5, 0))
-        
-        self.btn_filter_all = self.create_filter_btn("Semua", "All")
-        self.btn_filter_inputs = self.create_filter_btn("Inputs", "Inputs")
-        self.btn_filter_cash = self.create_filter_btn("Tunai", "Cash")
-        self.btn_filter_non = self.create_filter_btn("Non Tunai", "Non Cash")
-        self.btn_filter_unin = self.create_filter_btn("uninput", "Uninput")
+        self.filter_frame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight=1, uniform="flt")
+
+        self.btn_filter_all = self.create_filter_btn("All", "All", 0)
+        self.btn_filter_inputs = self.create_filter_btn("Inputs", "Inputs", 1)
+        self.btn_filter_cash = self.create_filter_btn("Cash", "Cash", 2)
+        self.btn_filter_non = self.create_filter_btn("NonCash", "Non Cash", 3)
+        self.btn_filter_split = self.create_filter_btn("Split", "Split", 4)
+        self.btn_filter_unin = self.create_filter_btn("UnInput", "Uninput", 5)
 
         # List Area
         self.scroll_log = ctk.CTkScrollableFrame(self, fg_color=CONSOLE_COLOR, border_width=1, border_color=BORDER_COLOR, corner_radius=0)
@@ -119,21 +147,22 @@ class SessionTab(ctk.CTkFrame):
 
     def next_page(self):
         indexed_data = list(enumerate(self.transactions))
-        filtered_data = [t for i, t in indexed_data if self.current_filter == "All" or (self.current_filter == "Inputs" and t.get("category") in ("Cash", "Non Cash")) or t.get("category") == self.current_filter]
+        filtered_data = [t for i, t in indexed_data if match_filter(t, self.current_filter)]
         max_pages = (len(filtered_data) - 1) // self.page_size
         if self.current_page < max_pages:
             self.current_page += 1
             self.refresh_list()
 
-    def create_filter_btn(self, text, cat):
-        w = tkfont.Font(family="Segoe UI", size=10).measure(text) + 24
+    def create_filter_btn(self, text, cat, col):
+        w = tkfont.Font(family="Segoe UI", size=10).measure(text) + 8
         btn = ctk.CTkButton(self.filter_frame, text=text, width=w, height=25, font=SMALL_FONT, fg_color="#e5e5e5", text_color="black", corner_radius=0, command=lambda: self.set_filter(cat))
-        btn.pack(side="left", padx=2)
+        btn.grid(row=0, column=col, sticky="ew", padx=1)
         self.action_buttons.append(btn)
         return btn
 
     def create_input_btn(self, parent, text, color, bg, cat, col):
-        btn = ctk.CTkButton(parent, text=text, height=38, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 11, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=0, command=lambda: self.add_transaction(cat))
+        w = tkfont.Font(family="Segoe UI", size=11, weight="bold").measure(text) + 8
+        btn = ctk.CTkButton(parent, text=text, width=w, height=38, fg_color=bg, hover_color="#e0e0e0", font=("Segoe UI", 11, "bold"), text_color=color, border_width=1, border_color=BORDER_COLOR, corner_radius=0, command=lambda: self.add_transaction(cat))
         btn.grid(row=0, column=col, sticky="ew", padx=2)
         self.action_buttons.append(btn)
         
@@ -155,13 +184,13 @@ class SessionTab(ctk.CTkFrame):
         self.update_filter_visuals()
 
     def update_filter_visuals(self):
-        btns = {"All": self.btn_filter_all, "Inputs": self.btn_filter_inputs, "Cash": self.btn_filter_cash, "Non Cash": self.btn_filter_non, "Uninput": self.btn_filter_unin}
+        btns = {"All": self.btn_filter_all, "Inputs": self.btn_filter_inputs, "Cash": self.btn_filter_cash, "Non Cash": self.btn_filter_non, "Split": self.btn_filter_split, "Uninput": self.btn_filter_unin}
         for cat, btn in btns.items():
             is_active = cat == self.current_filter
             btn.configure(fg_color=ACCENT_COLOR if is_active else "#e5e5e5", text_color="white" if is_active else "black")
 
     def update_edit_visuals(self):
-        btns = {"Cash": self.btn_cash, "Non Cash": self.btn_non, "Uninput": self.btn_unin}
+        btns = {"Cash": self.btn_cash, "Non Cash": self.btn_non, "Split": self.btn_split, "Uninput": self.btn_unin}
         for cat, btn in btns.items():
             if self.editing_index is not None and cat == self.editing_category:
                 btn.configure(border_width=2, border_color=ACCENT_COLOR)
@@ -229,6 +258,104 @@ class SessionTab(ctk.CTkFrame):
         dialog.wait_window()
         return result
 
+    @staticmethod
+    def parse_split_input(raw):
+        digits = "".join(ch for ch in (raw or "").replace(".", "") if ch.isdigit())
+        return int(digits) if digits else 0
+
+    @staticmethod
+    def split_counterpart(typed, total):
+        """Pasangan auto-isi: 0 jika ketikan 0, else total-ketikan (batas bawah 0)."""
+        if typed <= 0:
+            return 0
+        return max(0, total - typed)
+
+    def show_split_popup(self, total, pre_cash=None, pre_non=None):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Split Tunai + Non Tunai")
+        dialog.geometry("340x260")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - 340) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - 260) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        result = None
+        total_fmt = f"{total:,}".replace(",", ".")
+
+        ctk.CTkLabel(dialog, text=f"Total: Rp {total_fmt}", font=MAIN_FONT, text_color=TEXT_COLOR).pack(pady=(15, 5))
+        lbl_rest = ctk.CTkLabel(dialog, text="", font=SMALL_FONT, text_color="grey")
+        lbl_rest.pack(pady=(0, 5))
+
+        def fmt(v):
+            return f"{v:,}".replace(",", ".")
+
+        body = ctk.CTkFrame(dialog, fg_color="transparent")
+        body.pack(fill="x", padx=20)
+        ctk.CTkLabel(body, text="Tunai (Rp):", font=MAIN_FONT, text_color=TEXT_COLOR).pack(anchor="w")
+        entry_cash = ctk.CTkEntry(body, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0, justify="right")
+        entry_cash.pack(fill="x", pady=(0, 8))
+        ctk.CTkLabel(body, text="Non Tunai (Rp):", font=MAIN_FONT, text_color=TEXT_COLOR).pack(anchor="w")
+        entry_non = ctk.CTkEntry(body, fg_color=CONSOLE_COLOR, border_color=BORDER_COLOR, corner_radius=0, justify="right")
+        entry_non.pack(fill="x")
+
+        entry_cash.insert(0, "" if pre_cash is None else fmt(pre_cash))
+        entry_non.insert(0, "" if pre_non is None else fmt(pre_non))
+
+        def set_entry(e, v):
+            e.delete(0, "end")
+            e.insert(0, fmt(v))
+
+        def own_value(e):
+            digits = "".join(ch for ch in e.get().replace(".", "") if ch.isdigit())
+            e.delete(0, "end")
+            if digits:
+                e.insert(0, fmt(int(digits)))
+                return int(digits)
+            return 0
+
+        def update_rest():
+            rest = total - self.parse_split_input(entry_cash.get()) - self.parse_split_input(entry_non.get())
+            lbl_rest.configure(text=f"Sisa: Rp {fmt(rest)}" if rest != 0 else "Pas ✔")
+
+        def on_cash(event=None):
+            c = own_value(entry_cash)
+            set_entry(entry_non, self.split_counterpart(c, total))
+            update_rest()
+
+        def on_non(event=None):
+            n = own_value(entry_non)
+            set_entry(entry_cash, self.split_counterpart(n, total))
+            update_rest()
+
+        entry_cash.bind("<KeyRelease>", on_cash)
+        entry_non.bind("<KeyRelease>", on_non)
+        entry_cash.focus()
+        update_rest()
+
+        def on_save(event=None):
+            nonlocal result
+            c = self.parse_split_input(entry_cash.get())
+            n = self.parse_split_input(entry_non.get())
+            if c + n != total:
+                messagebox.showwarning("Peringatan", f"Tunai + Non Tunai harus = Rp {total_fmt}.")
+                return
+            result = (c, n)
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=10)
+        ctk.CTkButton(btn_frame, text="Batal", fg_color="#666666", text_color="white", corner_radius=0, command=dialog.destroy).pack(side="left", padx=5)
+        save_btn = ctk.CTkButton(btn_frame, text="Simpan", fg_color=ACCENT_COLOR, text_color="white", corner_radius=0, command=on_save)
+        save_btn.pack(side="right", padx=5)
+        entry_non.bind("<Return>", on_save)
+        entry_cash.bind("<Return>", lambda e: entry_non.focus())
+
+        dialog.wait_window()
+        return result
+
     def on_activate(self):
         self.entry_amount.focus_set()
         if self.file_path:
@@ -264,7 +391,7 @@ class SessionTab(ctk.CTkFrame):
         self.entry_amount.delete(0, "end"); self.entry_amount.insert(0, formatted)
 
     def _next_label(self):
-        labels = [t["label"] for t in self.transactions if t.get("category") in ("Cash", "Non Cash") and isinstance(t.get("label"), int)]
+        labels = [t["label"] for t in self.transactions if t.get("category") in ("Cash", "Non Cash", "Split") and isinstance(t.get("label"), int)]
         return max(labels) + 1 if labels else None
 
     def _ask_first_label(self):
@@ -305,28 +432,53 @@ class SessionTab(ctk.CTkFrame):
 
     def add_transaction(self, cat):
         if self.editing_index is not None:
-            old_cat = self.transactions[self.editing_index]["category"]
+            txn = self.transactions[self.editing_index]
+            old_cat = txn["category"]
             val_str = self.entry_amount.get().replace(".", "")
+            new_total = int(val_str) if val_str else int(txn["amount"])
 
+            items = None
             if cat == "Uninput" and old_cat != "Uninput":
                 items = self.show_uninput_popup()
                 if items is None:
                     return
-                self.transactions[self.editing_index]["items"] = items
-                self.transactions[self.editing_index].pop("label", None)
 
+            parts = None
+            if cat == "Split":
+                if old_cat == "Split" and txn.get("cash_part", 0) + txn.get("noncash_part", 0) == new_total:
+                    pre_c, pre_n = txn["cash_part"], txn["noncash_part"]
+                else:
+                    pre_c, pre_n = new_total, 0
+                parts = self.show_split_popup(new_total, pre_cash=pre_c, pre_non=pre_n)
+                if parts is None:
+                    return
+
+            nxt = None
             if old_cat == "Uninput" and cat != "Uninput":
-                self.transactions[self.editing_index].pop("items", None)
                 nxt = self._next_label()
                 if nxt is None:
                     nxt = self._ask_first_label()
                     if nxt is None:
                         return
-                self.transactions[self.editing_index]["label"] = nxt
+
+            if cat == "Uninput" and old_cat != "Uninput":
+                txn["items"] = items
+                txn.pop("label", None)
+
+            if old_cat == "Uninput" and cat != "Uninput":
+                txn.pop("items", None)
+                txn["label"] = nxt
+
+            if cat == "Split":
+                txn.pop("items", None)
+                txn["cash_part"], txn["noncash_part"] = parts
+            elif old_cat == "Split":
+                txn.pop("cash_part", None)
+                txn.pop("noncash_part", None)
 
             if val_str:
-                self.transactions[self.editing_index]["amount"] = int(val_str)
-            self.transactions[self.editing_index]["category"] = cat
+                txn["amount"] = int(val_str)
+            txn["category"] = cat
             self.save_session()
             self.cancel_edit()
             self.refresh_list()
@@ -339,8 +491,14 @@ class SessionTab(ctk.CTkFrame):
 
         val_str = self.entry_amount.get().replace(".", "")
         if not val_str: return
+        total = int(val_str)
+        parts = None
+        if cat == "Split":
+            parts = self.show_split_popup(total)
+            if parts is None:
+                return
         txn = {
-            "amount": int(val_str),
+            "amount": total,
             "category": cat,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -353,7 +511,9 @@ class SessionTab(ctk.CTkFrame):
                 if nxt is None:
                     return
             txn["label"] = nxt
-        should_trigger_pay = self.auto_input_from_ketoko and cat in ("Cash", "Non Cash")
+            if cat == "Split":
+                txn["cash_part"], txn["noncash_part"] = parts
+        should_trigger_pay = self.auto_input_from_ketoko and cat in ("Cash", "Non Cash", "Split")
         self.auto_input_from_ketoko = False
 
         self.transactions.append(txn)
@@ -407,8 +567,29 @@ class SessionTab(ctk.CTkFrame):
         self.pagination_frame.pack_forget()
         self.ud_frame.pack(fill="both", expand=True)
 
+    def show_split_detail(self, idx):
+        self.split_detail_idx = idx
+        item = self.transactions[idx]
+        cash = int(item.get("cash_part", 0))
+        non = int(item.get("noncash_part", 0))
+        self.ud_title.configure(text=f"Split - Rp {item['amount']:,}".replace(",", "."))
+
+        for w in self.ud_scroll.winfo_children():
+            w.destroy()
+
+        for label, val in (("Tunai", cash), ("Non Tunai", non), ("Total", int(item["amount"]))):
+            row = ctk.CTkFrame(self.ud_scroll, fg_color="white", border_width=1, border_color=BORDER_COLOR, corner_radius=0)
+            row.pack(fill="x", pady=2, padx=2)
+            ctk.CTkLabel(row, text=label, font=MAIN_FONT, text_color=TEXT_COLOR, anchor="w").pack(side="left", padx=10, pady=5)
+            ctk.CTkLabel(row, text=f"Rp {val:,}".replace(",", "."), font=("Segoe UI", 11, "bold"), text_color=ACCENT_COLOR, anchor="e").pack(side="right", padx=10, pady=5)
+
+        self.scroll_log.pack_forget()
+        self.pagination_frame.pack_forget()
+        self.ud_frame.pack(fill="both", expand=True)
+
     def hide_uninput_detail(self):
         self.uninput_detail_idx = None
+        self.split_detail_idx = None
         self.ud_frame.pack_forget()
         self.scroll_log.pack(fill="both", expand=True, padx=20, pady=5)
         self.pagination_frame.pack(fill="x", padx=20, pady=5)
@@ -423,7 +604,7 @@ class SessionTab(ctk.CTkFrame):
         for w in self.scroll_log.winfo_children(): w.destroy()
         
         indexed_data = list(enumerate(self.transactions))
-        filtered_data = [(i, t) for i, t in indexed_data if self.current_filter == "All" or (self.current_filter == "Inputs" and t.get("category") in ("Cash", "Non Cash")) or t.get("category") == self.current_filter]
+        filtered_data = [(i, t) for i, t in indexed_data if match_filter(t, self.current_filter)]
         
         total_items = len(filtered_data)
         total_pages = max(1, (total_items + self.page_size - 1) // self.page_size)
@@ -443,9 +624,9 @@ class SessionTab(ctk.CTkFrame):
             info_frame = ctk.CTkFrame(row, fg_color="transparent")
             info_frame.pack(side="left", fill="both", expand=True, padx=10, pady=5)
             
-            cat_color = {"Cash": "#2e7d32", "Non Cash": "#fbc02d", "Uninput": "#d32f2f"}.get(item["category"], TEXT_COLOR)
+            cat_color = {"Cash": "#2e7d32", "Non Cash": "#fbc02d", "Split": ACCENT_COLOR, "Uninput": "#d32f2f"}.get(item["category"], TEXT_COLOR)
 
-            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {item['amount']:,}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
+            lbl_val = ctk.CTkLabel(info_frame, text=f"Rp {display_amount(item, self.current_filter):,}".replace(",", "."), font=("Segoe UI", 12, "bold"), text_color=cat_color, anchor="w")
             lbl_val.pack(fill="x")
 
             ts_text = f"{item['label']} | {item['timestamp']}" if isinstance(item.get("label"), int) else item['timestamp']
@@ -457,6 +638,11 @@ class SessionTab(ctk.CTkFrame):
                 info_frame.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
                 lbl_val.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
                 lbl_ts.bind("<Double-Button-1>", lambda e, x=idx: self.show_uninput_detail(x))
+            elif item["category"] == "Split":
+                row.bind("<Double-Button-1>", lambda e, x=idx: self.show_split_detail(x))
+                info_frame.bind("<Double-Button-1>", lambda e, x=idx: self.show_split_detail(x))
+                lbl_val.bind("<Double-Button-1>", lambda e, x=idx: self.show_split_detail(x))
+                lbl_ts.bind("<Double-Button-1>", lambda e, x=idx: self.show_split_detail(x))
             
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.pack(side="right", padx=5)
@@ -468,7 +654,7 @@ class SessionTab(ctk.CTkFrame):
         
         self.lbl_page.configure(text=f"Halaman {self.current_page + 1} dari {total_pages}")
         
-        total_sum = sum(t["amount"] for i, t in filtered_data)
+        total_sum = sum(display_amount(t, self.current_filter) for i, t in filtered_data)
         self.lbl_total.configure(text=f"{total_sum:,}.00".replace(",", "."))
         n_in = sum(1 for t in self.transactions if t.get("category") != "Uninput")
         n_un = sum(1 for t in self.transactions if t.get("category") == "Uninput")

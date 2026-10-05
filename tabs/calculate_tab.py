@@ -21,6 +21,25 @@ ARABIC_ESC_POS_IMAGE_WIDTH = 300
 ARABIC_ESC_POS_IMAGE_HEIGHT = 80
 ARABIC_ESC_POS_IMAGE_BYTES_PER_ROW = 38
 
+
+def cash_portion(t):
+    """Porsi tunai: Cash penuh, Split = cash_part, lainnya 0 (aman untuk JSON lama)."""
+    if t.get("category") == "Cash":
+        return int(t.get("amount", 0))
+    if t.get("category") == "Split":
+        return int(t.get("cash_part", 0))
+    return 0
+
+
+def noncash_portion(t):
+    """Porsi non tunai: Non Cash penuh, Split = noncash_part, lainnya 0."""
+    if t.get("category") == "Non Cash":
+        return int(t.get("amount", 0))
+    if t.get("category") == "Split":
+        return int(t.get("noncash_part", 0))
+    return 0
+
+
 class CalculateTab(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent, fg_color="transparent", corner_radius=0)
@@ -450,7 +469,7 @@ class CalculateTab(ctk.CTkFrame):
         act_tab = self.controller.tabs.get("ACT")
         if act_tab and act_tab.file_path:
             self.comp_frame.pack(fill="x", pady=(0, 10), before=self.btn_box)
-            sys_cash_total = sum(t["amount"] for t in act_tab.transactions if t["category"] == "Cash")
+            sys_cash_total = sum(cash_portion(t) for t in act_tab.transactions)
             self.lbl_sys_total.configure(text=f"Rp {sys_cash_total:,}".replace(",", "."), text_color=TEXT_COLOR)
             diff = physical_total - sys_cash_total
             diff_text = f"Rp {diff:,}".replace(",", ".")
@@ -584,7 +603,7 @@ class CalculateTab(ctk.CTkFrame):
         now = datetime.now()
         act_tab = self.controller.tabs.get("ACT")
         transactions = act_tab.transactions if act_tab else []
-        non_cash_total = sum(t["amount"] for t in transactions if t["category"] == "Non Cash")
+        non_cash_total = sum(noncash_portion(t) for t in transactions)
         physical_lines = []
         physical_total = 0
         margin = 2
